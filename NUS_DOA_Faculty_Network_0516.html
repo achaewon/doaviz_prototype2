@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NUS DoA — Faculty Expertise Network</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#fff;color:#1a1a1a;font-family:'Source Sans 3',sans-serif;overflow:hidden;height:100vh;-webkit-font-smoothing:antialiased}
+
+/* ── NUS HEADER ── */
+.nus-hd{position:fixed;top:0;left:0;right:0;z-index:80;background:#fff;border-bottom:1px solid #e5e7eb}
+.nus-hd-top{display:flex;align-items:center;gap:12px;padding:8px 20px;border-bottom:1px solid #e5e7eb}
+.nus-hd-top .nus-cde{font-size:13px;color:#333;line-height:1.3}
+.nus-hd-bar{background:#bbb;padding:6px 20px}
+.nus-hd-bar span{font-size:13px;font-weight:400;letter-spacing:.25em;color:#fff;text-transform:uppercase}
+
+/* ── LEFT SIDEBAR ── */
+.side{position:fixed;top:78px;left:0;bottom:0;width:240px;z-index:50;background:#fafafa;border-right:1px solid #e5e7eb;display:flex;flex-direction:column}
+.side-head{padding:14px 16px 8px;flex-shrink:0}
+.side-title{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;color:#1a1a1a;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.side-head input{font-family:inherit;font-size:11px;width:100%;padding:6px 10px;border:1px solid #e5e7eb;border-radius:4px;background:#fff;outline:none}
+.side-head input:focus{border-color:#ef7c00}
+.side-head input::placeholder{color:#ccc}
+.side-body{flex:1;overflow-y:auto;padding:0 12px 20px;font-size:11px}
+
+.grp{margin-top:6px;border-bottom:1px solid #eee}
+.grp-hd{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 4px;cursor:pointer;user-select:none}
+.grp-hd:hover{background:rgba(0,0,0,.02)}
+.grp-hd .gname{font-family:'Source Sans 3',sans-serif;font-size:11px;font-weight:400;color:#1a1a1a;letter-spacing:.02em;line-height:1.3;flex:1}
+.grp-hd .gcnt{font-family:'IBM Plex Mono',monospace;font-size:9px;color:#999;flex-shrink:0}
+.grp-hd .ar{font-size:8px;color:#999;transition:transform .2s;flex-shrink:0}
+.grp-hd.open .ar{transform:rotate(90deg)}
+.grp-hd.active .gname{color:#ef7c00}
+
+.subs{display:none;padding:0 0 6px 14px;border-left:1px dashed #e5e7eb;margin-left:5px}
+.grp-hd.open+.subs{display:block}
+.sub-item{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;cursor:pointer;font-size:10.5px;color:#666;border-radius:3px;letter-spacing:.02em}
+.sub-item:hover{background:#f3f4f6;color:#1a1a1a}
+.sub-item.active{background:#fff3e0;color:#ef7c00;font-weight:600}
+.sub-item .scnt{font-family:'IBM Plex Mono',monospace;font-size:9px;color:#bbb}
+
+.people-list{display:none;padding:0 0 8px 8px;font-size:10px}
+.sub-item.active+.people-list{display:block}
+.pname{padding:2px 6px;cursor:pointer;color:#888;letter-spacing:.02em;text-transform:uppercase;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pname:hover{color:#1a1a1a;background:rgba(0,0,0,.02)}
+.pname.hl{color:#ef7c00;font-weight:600}
+
+/* ── CANVAS ── */
+.main{position:fixed;top:78px;left:240px;right:0;bottom:0;background:#fff;overflow:hidden}
+#svg{width:100%;height:100%}
+
+/* network elements */
+.edge{stroke-width:var(--w,.3);stroke-opacity:var(--o,.11);fill:none;pointer-events:none;transition:stroke-opacity .2s,stroke-width .2s,stroke .2s}
+.edge.lit{stroke-opacity:.62;stroke-width:calc(var(--w,.3) + .55)}
+.edge.dim{stroke-opacity:.012}
+.edge.hidden{stroke-opacity:0}
+
+.pnode{cursor:pointer;opacity:.9;transition:opacity .2s}
+.pnode circle{transition:r .15s,stroke .15s,stroke-width .15s,opacity .2s}
+.pnode:hover{opacity:1}
+.pnode:hover circle{stroke-width:1.5}
+.pnode.dim{opacity:.22}
+.pnode.lit{opacity:1}
+.pnode.lit circle{stroke-width:1.5}
+
+.pname-arc{
+  font-family:'Source Sans 3',sans-serif;
+  font-size:9px;font-weight:500;
+  fill:#444;pointer-events:none;
+  paint-order:stroke;stroke:rgba(255,255,255,.92);stroke-width:2.4px;stroke-linejoin:round;
+  transition:fill .15s,font-size .15s,font-weight .15s,opacity .2s;
+}
+.pnode:hover .pname-arc{fill:#1a1a1a;font-weight:700;font-size:11px}
+.pnode.lit .pname-arc{fill:#1a1a1a;font-weight:700;font-size:11px}
+
+.group-label{
+  font-family:'Source Sans 3',sans-serif;
+  font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;
+  text-anchor:middle;dominant-baseline:central;
+  pointer-events:all;cursor:pointer;
+  paint-order:stroke;stroke:rgba(255,255,255,.86);stroke-width:4px;stroke-linejoin:round;
+  transition:font-size .2s,opacity .2s;
+}
+
+.sub-label{
+  font-family:'IBM Plex Mono',monospace;
+  font-weight:500;text-transform:uppercase;
+  letter-spacing:.08em;font-size:10px;
+  text-anchor:middle;dominant-baseline:central;
+  pointer-events:all;cursor:pointer;
+  fill:#3a3a3a;opacity:.72;
+  paint-order:stroke;stroke:rgba(255,255,255,.95);stroke-width:3.2px;stroke-linejoin:round;
+  transition:opacity .25s,fill .15s,font-size .15s;
+}
+.sub-label:hover{opacity:1;fill:#1a1a1a}
+.sub-label.show{opacity:.95;fill:#1a1a1a;font-size:11px}
+.sub-label.lit{fill:#ef7c00;font-size:12px;opacity:1}
+.sub-label.dim{opacity:.10}
+
+/* ── RIGHT PROFILE PANEL ── */
+.rp{position:fixed;top:78px;right:0;bottom:0;width:340px;z-index:60;background:#fff;border-left:2px solid #ef7c00;transform:translateX(100%);transition:transform .35s cubic-bezier(.16,1,.3,1);overflow-y:auto;padding:24px 22px 40px}
+.rp.open{transform:translateX(0)}
+.rp-x{position:absolute;top:10px;right:10px;width:22px;height:22px;border:1px solid #e5e7eb;border-radius:3px;background:#fafafa;color:#888;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center}
+.rp-x:hover{background:#eee}
+.rp .av{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:24px;color:#fff;margin-bottom:14px}
+.rp h2{font-size:16px;font-weight:600;line-height:1.35;padding-right:32px;text-transform:uppercase;letter-spacing:.05em}
+.rp .rpos{font-size:11px;color:#1a1a1a;margin:5px 0 12px;line-height:1.45;text-transform:uppercase;letter-spacing:.04em}
+.rbdg{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;padding:0;margin:1px 8px 1px 0;color:#555;text-transform:uppercase;letter-spacing:.1em}
+.rsec{font-family:'IBM Plex Mono',monospace;font-size:8.5px;font-weight:600;color:#1a1a1a;letter-spacing:.14em;text-transform:uppercase;margin:16px 0 6px;padding-bottom:4px;border-bottom:1px solid #eee}
+.rtag{display:inline-block;font-size:11px;font-weight:500;padding:0;color:#1a1a1a;margin:2px 0;letter-spacing:.03em;line-height:1.6}
+.rtag::after{content:' · ';font-weight:400;color:#ccc;margin:0 4px}
+.rtag:last-child::after{content:''}
+.rtag.ac{color:#ef7c00;font-weight:600}
+.rtag.ac::after{color:#f5d5b0}
+.rdesc{font-size:12px;line-height:1.65;color:#555;margin-top:6px}
+.rlink{display:inline-block;margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:500;padding:6px 14px;border:1px solid #1a1a1a;border-radius:4px;color:#1a1a1a;text-decoration:none;transition:all .12s;text-transform:uppercase;letter-spacing:.08em}
+.rlink:hover{background:#1a1a1a;color:#fff}
+
+/* ── LEGEND (top-right) ── */
+.legend{position:fixed;top:90px;right:14px;z-index:55;background:rgba(255,255,255,.94);backdrop-filter:blur(6px);border:1px solid #e5e7eb;border-radius:6px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;max-height:calc(100vh - 110px);overflow-y:auto;width:230px}
+.legend.hidden{display:none}
+.legend-title{font-size:8.5px;font-weight:600;color:#888;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+.legend-note{font-size:8.5px;line-height:1.45;color:#777;margin:0 0 10px 0;padding-bottom:8px;border-bottom:1px solid #eee;letter-spacing:.02em}
+.legend-note strong{color:#333;font-weight:600}
+.legend-group{margin-bottom:2px}
+.legend-item{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:9.5px;cursor:pointer;color:#444;letter-spacing:.04em;text-transform:uppercase;user-select:none}
+.legend-item:hover{color:#1a1a1a}
+.legend-item .ld{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend-item .ar{font-size:7px;color:#999;margin-left:auto;transition:transform .2s}
+.legend-item.open .ar{transform:rotate(90deg)}
+.legend-subs{display:none;padding:2px 0 4px 18px;border-left:1px dashed #e5e7eb;margin-left:4px}
+.legend-item.open+.legend-subs{display:block}
+.legend-sub-item{padding:2px 0;font-size:8.5px;cursor:pointer;color:#888;letter-spacing:.04em;line-height:1.35}
+.legend-sub-item:hover{color:#1a1a1a}
+.legend-sub-item.active{color:#ef7c00;font-weight:600}
+
+.ft{position:fixed;bottom:6px;right:10px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#bbb;z-index:40;letter-spacing:.06em}
+</style>
+</head>
+<body>
+
+<div class="nus-hd">
+  <div class="nus-hd-top">
+    <span style="font-family:serif;font-size:18px;font-weight:700;color:#333;letter-spacing:-.5px">NUS</span>
+    <span style="color:#ccc;font-size:18px;font-weight:300">|</span>
+    <span class="nus-cde">College of Design<br>and Engineering</span>
+  </div>
+  <div class="nus-hd-bar"><span>Department &nbsp;of &nbsp;Architecture</span></div>
+</div>
+
+<div class="side">
+  <div class="side-head">
+    <div class="side-title">Faculty Expertise Network</div>
+    <input id="src" placeholder="Search faculty or topic…">
+  </div>
+  <div class="side-body" id="sB"></div>
+</div>
+
+<div class="rp" id="rp"><button class="rp-x" id="rpX">✕</button><div id="rpB"></div></div>
+
+<div class="legend" id="legend">
+  <div class="legend-title">Research Themes</div>
+  <div class="legend-note">Lines connect faculty who share one or more expertise themes.</div>
+  <div id="legendBody"></div>
+</div>
+
+<div class="main"><svg id="svg"></svg></div>
+
+<div class="ft"><span id="sN">95</span> faculty · <span id="sG">6</span> groups · <span id="sSG">27</span> expertise themes</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const D={"people":[{"n":"Anuj JAIN (Dr)","p":"Adjunct Assistant Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/anuj-jain/","d":"Dr. Anuj Jain is the Director and Principal Ecologist at bioSEA, an Ecology and Biomimicry Design consultancy in Singapore. Anuj founded bioSEA in 2017 to bridge the gap between nature & architecture as he believes that urban development needs nature as a stakeholder at the design table. The firm specialises in biodiversity and ecosystem service impact assessments, financial valuation of greenery as well as ecological and wildlife infrastructure design. bioSEA continues to imbibe the founding philosophy of 'shaping built environments to function like rainforests'.","e":["biomimicry design","biodiversity","ecosystem service impact assessments","financial valuation of greenery"],"ini":"AJ","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/07/Anuj-JAIN.jpg","gi":[0,3,4],"si":[1,16,17,23]},{"n":"YEUNG Man Ki Larry","p":"Adjunct Assistant Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/yeung-man-ki-larry/","d":"Larry is a designer and community organiser who passionately advocates for a participatory, community-centric approach to the design and planning of cities and neighbourhoods. With a background in architectural design and project management in Singapore, he now serves as the Executive Director of Participate in Design (P!D), a non-profit design organisation dedicated to helping neighbourhoods and public institutions create community-owned spaces and solutions. Since earning his M.","e":["architectural design","project management","neighbourhood planning","public space design"],"ini":"YL","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/08/Larry.png","gi":[0,1],"si":[0,3,5,10]},{"n":"John ACHARI","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/john-achari/","d":"John Achari is an Adjunct Associate Professor at the National University of Singapore, College of Design and Engineering – Department of Architecture. He teaches in the Master of Urban Planning (MUP) programme, where he coordinates the Year 1 Studio and the Planning Foundations and Software Workshop. A former Deputy Programme Director, he has contributed to curriculum restructuring and the integration of applied design and data-driven methods. He also teaches in the NUS Cities Programme and is a Visiting Lecturer at the University of Queensland, leading a masterclass on urban design and resilient urbanism.","e":["urban planning","urban design","resilient urbanism","resilient and adaptive urbanism"],"ini":"JA","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/11/achari.jpg","gi":[1,4],"si":[4,7,20]},{"n":"Jason ANG Kwang Lin","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/jason-ang-kwang-lin/","d":"Jason Ang, a Singaporean that has practiced architecture, urban design and master planning for the past 25 years. The last 20 years of his practice was in the People's Republic of China with majority of the projects being large scale architecture, urban planning and design of cities. His private practice has since completed more than 150 projects that spanned an area of more than 1000km2. Interested in the idea of a vibrant, sustainable and diverse city, Jason has embarked in the study and method of creating interactive place since his university days.","e":["master planning","large scale architecture","large scale urban planning","large scale urban design"],"ini":"JL","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/angkwanglinjason.jpg","gi":[1],"si":[4,7]},{"n":"CHAW Chih Wen","p":"Adjunct Associate Professor","s":"","u":"https://cde.nus.edu.sg/arch/staffs/chaw-chih-wen/","d":"Chaw Chih Wen is a registered Architect in Singapore, founding director of Hyphen Architects, a practice interested in surveying the emerging world of homo deus and its related socio-political-cultural phenomenon and most importantly, their spatial implications. The practice operates across the region of South East Asia and have been recognised in both regional and global awards such as Singapore Institute of Architects Award (Residential), BCI Asia Award (hospitality), Inside Awards (Residential) and AHEAD Asia (hospitality).","e":["Architecture","Spatial Design"],"ini":"CW","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2023/07/chaw.png","gi":[0],"si":[0]},{"n":"CHEN Yu (Dr)","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/chen-yu-dr/","d":"Dr Chen is an urban historian, architect, and column writer. She obtained her M.Eng in Architecture at Tianjin University, followed by her PhD at the National University of Singapore. Her research interests center around urban history of treaty ports in China, overseas Chinese architecture and settlement, urban and rural regeneration in Asia. She is one of the leading scholars in the studies of Gulangyu and oversea Chinese architecture. She was awarded several research grants from Singapore, Japan, China, etc. She was the recipient of 2008 JAABE Best Paper Award. Qualified as Class 1 registered architect in China, she designed and managed several urban and architectural projects in Asia.","e":["urban history of treaty ports in China","overseas Chinese architecture and settlement","urban and rural regeneration in Asia","studies of Gulangyu and overseas Chinese architecture"],"ini":"CY","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/img-52.jpg","gi":[0,1,2],"si":[0,6,14]},{"n":"Jeffrey HO","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/jeffrey-ho/","d":"Jeffrey Ho - an architect, urban planner, and educator with over 40 years of experience − is widely regarded for his award-winning urban planning projects that have spread over 90 cities across 30 countries. Currently, he is an independent consultant, NUS Adjunct Associate Professor, CLC advisor, and URA Academy Senior Fellow. He researches and writes with an Asian perspective on emerging urbanism and housing trend. He also participates in expert panels for various programs of public and private organizations.","e":["urban planning","emerging urbanism","emerging housing trend in Asia","urban masterplanning"],"ini":"JH","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/jeffreyho.jpg","gi":[1],"si":[4,5,7]},{"n":"HO Weng Hin","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/ho-weng-hin/","d":"Ho Weng Hin is co-founder of Studio Lapis,an award-winning architectural conservation specialist consultancy based in Singapore with local and overseas projects whose work has garnered accolades such as the Singapore Urban Redevelopment Authority Architectural Heritage Awards and the UNESCO Asia-Pacific Award for Cultural Heritage Conservation. He obtained his M.Arch degree at NUS DOA, and postgraduate specialist diploma in architectural conservation at the University of Genoa, Italy, with top honours. He is founding chapter Chair of DOCOMOMO Singapore and a founding board director of the Singapore National Committee of ICOMOS,an advisory body to UNESCO on heritage conservation.","e":["architectural conservation","heritage conservation","heritage policy and planning","cultural heritage studies"],"ini":"HH","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/howenghin.jpg","gi":[1,2],"si":[6,8,13]},{"n":"Gaurang KHEMKA","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/gaurang-khemka/","d":"Gaurang is an Architect with a specialisation in Urban Design. He has 30 years of experience working in North America, Europe and Asia and has worked across a range of scales and contexts, from master planning and programming public institutions to detailed design of high-end hotels, resorts, and residences. He understands the essence of place making and the qualities that create some of the world's finest institutional, hospitality, commercial and residential projects and combines that with his management skills to deliver a product of the highest quality. He studied Architecture, Urban Design and Planning from University of California, Berkeley.","e":["Architecture","Urban Design","master planning and programming public institutions","detailed design of high-end hotels, resorts, and residences"],"ini":"GK","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/09/gk1-scaled.jpg","gi":[0,1],"si":[0,4,8,9,10]},{"n":"Ryusuke KOJIO","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/ryusuke-kojio/","d":"Ryusuke Kojio is a licensed/registered architect in Japan, Germany, and the APEC region, with over 35 years of experience across diverse building projects. His extensive career spans approximately 16 years in Europe (including Germany, the Netherlands, the UK, the Czech Republic, and Poland) and six and a half years in Singapore and Southeast Asia. He has been affiliated with Takenaka Corporation, a renowned Japanese design-build company with over four centuries of history. Takenaka has been operating in Singapore for more than 50 years and is credited with landmark projects such as the National Gallery Singapore, Changi Airport Terminals, and the Singapore Land Tower. Mr.","e":["architectural history","architectural systems and management","architectural conservation"],"ini":"RK","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2022/02/ryusuke_kojio01b.png","gi":[2],"si":[12,13]},{"n":"Adrian LAI Wen-Yang","p":"Adjunct Associate Professor","s":"","u":"https://cde.nus.edu.sg/arch/staffs/adrian-lai-wen-yang/","d":"Adrian graduated from the Architectural Association in London and the National University of Singapore. His education and practical training has taken him to London, Hong Kong and Guangzhou in China and back to Singapore. He is a registered Architect in the UK and Singapore. Adrian has been an Architecture Design Tutor in the National University of Singapore (NUS) since 2011 and has been Guest Critic at Singapore University of Technology & Design (SUTD) and Singapore Polytechnic (SP). He has given keynote speeches at Archifest 2013 and CAADRIA 2014 on his experience with detailed design and the complex geometry of Gardens by the Bay South.","e":["architecture","detailed design","complex geometry of Gardens by the Bay South"],"ini":"AW","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/10/AdrianLAI.jpg","gi":[0],"si":[0]},{"n":"LEE May Anne","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/lee-may-anne/","d":"(AR) Lee May Anne is a practising Architect in Singapore who is the principal at her own practice – MAKK Architects. She was the lead architect and presenter for the 2008 Shanghai World Exposition, Singapore pavilion where her team was the 4 final shortlisted. She was also the curatorial team in the 2008 Venice Biennale for the Singapore Architecture pavilion. In her senior years with NUS where she was the vice president of 'The Architecture Society' (TAS), she has co-run and co-organized school events, architectural and art exhibitions together with her committee.","e":["architectural design","stage design","art installation","exhibition design"],"ini":"LA","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/leekahwee.jpg","gi":[0],"si":[0,3]},{"n":"LEE Hui Lian","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/lee-hui-lian/","d":"Lee Hui Lian is a registered Architect in Singapore, an educator, and an artist at heart. She earned her Master of Architecture from the National University of Singapore on a full NUS ASEAN Scholarship and began her career with FARM. In 2021, she founded OMG Atelier while continuing her collaboration with FARM. This expansion of her practice has allowed her to rekindle her love for the visual arts and explore more personal projects. Her portfolio spans residential, conservation, and exhibition design. In 2025, she was named one of Singapore's emerging architects in URA's fourth edition of \"20 Under 45\" and received an Honourable Mention in the 2024 SIA–YAL Young Architects Award.","e":["residential design","conservation design","exhibition design","design research"],"ini":"LL","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/07/LeeHuiLian_ProfilePhoto-1-1.png","gi":[0],"si":[0,3,5]},{"n":"Victor LEE","p":"Adjunct Associate Professor","s":"","u":"https://cde.nus.edu.sg/arch/staffs/victor-lee/","d":"Victor is the cofounder and Director of Plystudio Architects, a design-driven architectural practice based in Singapore whose approach to design is informed and evolved through research, enquiry, positioning and differentiation. Victor's preoccupation with simple geometry, organisational typology and material logic has engendered a particular building economy which feature consistently in the work of the practice. Victor is a registered architect in Singapore and the UK, where he trained at the Architectural Association in London.","e":["architectural education","architectural pedagogy","design-driven architectural practice","simple geometry in architectural design"],"ini":"VL","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2021/02/v02a.png","gi":[0],"si":[0]},{"n":"Erik G. L'HEUREUX (Dr)","p":"Adjunct Associate Professor","s":"","u":"https://cde.nus.edu.sg/arch/staffs/erik-g-lheureux-aia-leed-ap/","d":"Erik G. L'Heureux (PhD) FAIA, LEED AP BD+C integrates design education and academic leadership with Research-by-Design, creating sustainable strategies for the \"Architecture of Equatorial Envelopes\" in hot, wet, and dense \"Equatorial Cities\" to meet the challenges of a warming world. He currently serves as Professor and Head of the Department of Architecture at Monash University. For two decades prior, L'Heureux taught at the National University of Singapore (NUS), where he held multiple leadership roles including Dean's Chair Associate Professor (tenured), Vice Dean, Programme Director for both undergraduate and master's programs, and Cluster Leader for Research-by-Design.","e":["design education","academic leadership","sustainable strategies for architecture","climate-responsive design"],"ini":"EL","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/eriklheureux.jpg","gi":[0],"si":[1]},{"n":"NEO Sei Hwa","p":"Adjunct Associate Professor","s":"","u":"https://cde.nus.edu.sg/arch/staffs/neo-sei-hwa/","d":"A Singaporean, Neo Sei Hwa completed his bachelor degree in Architecture with honors in the National University of Singapore (1993). He is registered with the Singapore Institute of Architects (Registration No. C1127), also with the Board of Architects (Registration No. 1596). He has been teaching in the Department of Architecture, School of Design & Environment, National University of Singapore since 2000. He has practised with international architectural firms in Singapore and Hong Kong. Sei Hwa's work have also been featured in SPACE Magazine year 2000 and AISA ARCHITECT Magazine year 2005.","e":["Architecture"],"ini":"NH","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/10/NEOSeiHwa.jpg","gi":[0],"si":[0]},{"n":"TAN Teck Kiam","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/tan-teck-kiam/","d":"","e":[],"ini":"TK","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/07/TTK.jpg","gi":[],"si":[]},{"n":"THAM Chern Mei Karen","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/tham-chern-mei-karen/","d":"Karen Tham is a specialist consultant in Master Planning, Urban Design and Resilient Communities. She brings over 30 years of international working experience in architecture, urban planning, urban design and landscape architecture. She has practiced in Boston, San Francisco, Hong Kong, and Singapore. Karen is a licensed architect in the USA, a certified city planner in both the USA (AICP) and Singapore (SICP), and an accredited landscape architect in Singapore (SILA). She holds a Master's degree in City Planning from the Massachusetts Institute of Technology (MIT) and a Bachelor's degree in Architecture from the University of Oregon.","e":["Master Planning","Urban Design","Resilient Communities","urban planning"],"ini":"TK","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/07/Karen_Tham_1.jpg","gi":[1,3],"si":[5,7,16]},{"n":"TEH Joo Heng","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/teh-joo-heng/","d":"","e":[],"ini":"TH","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/10/TEHJooHeng.jpg","gi":[],"si":[]},{"n":"TIAH Nan Chyuan","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/tiah-nan-chyuan/","d":"Nan Chyuan graduated from the National University of Singapore and the Architectural Association in London on a scholarship from Urban Redevelopment Authority. He is a Director at FARM, a cross disciplinary design practice that won the President's Design Award Design of the Year in 2010 and was featured in Wallpaper's Architects' Directory 2018. In 2017, Nan Chyuan was also recognised as one of Singapore's emerging architects in URA's third edition of \"20 Under 45\" exhibition.","e":["cross disciplinary design","architecture","architectural education","design advocacy"],"ini":"TC","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/tiahnanchyaun.jpg","gi":[0],"si":[0,6]},{"n":"WONG Sheau Fong","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/wong-sheau-fong/","d":"Sheau Fong recently joined DOA to teach studio works with Master of Arts in Urban Design. Prior to this, she has been involved in teaching part-time at various points with College of Engineering and Design (CDE) since 2009; first with Master of Environmental Management at Centre of Sustainable Asian Cities (CSAC) and later with Master of Urban Planning. Sheau Fong started her professional career as an architect, obtained her licenses in architecture and landscape design through project works.","e":["urban design","environmental management","urban planning","architecture"],"ini":"WF","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/07/WongSF.png","gi":[0,1,3],"si":[0,9,16]},{"n":"WU Yen Yen","p":"Adjunct Associate Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/wu-yen-yen/","d":"Yen Yen Wu is a registered Architect in Singapore, founding Director of Genome Architects, a practice with a portfolio of diverse local private and several key public projects, premised on approaching design through understanding natural systems and conveying thinking processes through the design of built environments. The practice has received design awards from the Singapore Institute of Architects. Yen Yen graduated from Columbia University Graduate School of Architecture, Planning and Preservation (GSAPP) with a Master of Architecture, where she received an Honor Award for Excellence in Design. Her undergraduate degree was from National University of Singapore.","e":["architecture","design of built environments"],"ini":"WY","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/wuyenyen.jpg","gi":[0],"si":[0,1]},{"n":"ZHANG Ye (Dr)","p":"Adjunct Associate Professor","s":"","u":"https://cde.nus.edu.sg/arch/staffs/zhang-ye-dr/","d":"ZHANG Ye is Associate Professor (tenured) and Assistant Dean (International relations) at School of Architecture, Tsinghua University. Before returning to Tsinghua University in 2024, he was Associate Professor at National University of Singapore, wherein he served as Deputy Head, Urbanism Cluster Leader, and Director of Master of Arts in Urban Design (MAUD) programme at Department of Architecture. He has also been serving as Director General of International Forum on Urbanism (IFoU) since 2020, an international network of universities and research institutes with the task to strengthen the collaboration in the field of Urbanism.","e":["urban form","urbanism","historical urban landscape","human-environment interactions"],"ini":"ZY","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/zhangye.jpg","gi":[0,1],"si":[1,4]},{"n":"T.K.SABAPATHY","p":"Adjunct Professor","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/t-k-sabapathy/","d":"Sabapathy has been teaching the histories of art in the Department of Architecture since 1981. He has curated exhibitions and published extensively on art and artists, laying foundations for examining the modern in the region of Southeast Asia, historically.","e":["histories of art","artists","modern art in Southeast Asia"],"ini":"T.","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/tksabapathy.jpg","gi":[1,2],"si":[4,14]},{"n":"TUNG Yan Janice","p":"ASSISTANT PROFESSOR (PRACTICE TRACK)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/tung-yan-janice/","d":"Janice Tung is an urban designer, landscape architect and Assistant Professor in the Department of Architecture at the National University of Singapore. Janice's current research investigates how the cultivation and exchange of botanical commodities have structured spatial, political, and material relations across scales, shaping urban and territorial formations. Through participatory scenario planning, she examines their social–ecological agency as embedded within histories of labour, land, and environmental governance.","e":["urban design","landscape architecture","urban and territorial formations","environmental governance"],"ini":"TJ","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/04/JTung.jpeg","gi":[1,3],"si":[6,7,8,16]},{"n":"Filip BILJECKI (Dr)","p":"Assistant Professor (Presidential Young Professor) (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/filip-biljecki/","d":"Filip Biljecki received his PhD (cum laude) in 3D GIS and MSc in Geomatics from the Delft University of Technology in the Netherlands. His principal research interests are 3D city models and geographic information science (GIS). Dr Biljecki was awarded the prestigious Young Researcher Award in GIScience by the Austrian Academy of Sciences, and the award for the best doctoral research in GIS in Europe by the European Spatial Data Research organisation. He established the NUS Urban Analytics Lab (https://ual.sg/), a geospatial research group focusing at the intersection of urban analytics, geographic data science, and 3D city modelling.","e":["3D GIS","Geomatics","3D city models","geographic information science (GIS)"],"ini":"FB","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/10/FIlipBILJECKI.jpg","gi":[1,5],"si":[4,6]},{"n":"Alvin CHUA (Dr)","p":"Assistant Professor (Research Track)","s":"","u":"https://cde.nus.edu.sg/arch/staffs/alvin-chua/","d":"Alvin is a Research Assistant Professor at NUS College of Design and Engineering and Deputy Director of Research for NUS Cities. He holds a PhD in Engineering Science from KU Leuven (Belgium) and a Master of Design from LASALLE College of the Arts (Singapore). His scientific and technical interests lie in the application of geospatial modelling, artificial intelligence, and simulation to urban planning and governance. Alvin is driving the development of urban science capabilities in geodemographic modelling, studies of town typology, and AI for the Built Environment, fostering translational research that connects scientific insights to real-world planning and governance challenges.","e":["Engineering Science","Design","geospatial modelling","artificial intelligence"],"ini":"AC","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/10/Alvin_Chua-1.png","gi":[1,5],"si":[4,25]},{"n":"AHN Chaewon","p":"Assistant Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/ahn-chaewon/","d":"Assistant Professor Chaewon Ahn is an urban researcher who studies the relationship between social systems and the built environment using urban data and analytical frameworks. Her research interests are formed through academic and professional experiences in architecture, urban design, data visualisation, and urban studies. Her research focuses on social networks and communities in cities; their relationship to the structure of the built environment; and the influences of urban planning programmes that engage them.","e":["urban design","data visualisation","urban studies","urban and regional planning"],"ini":"AC","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/08/ahn.jpg","gi":[1,5],"si":[4,25]},{"n":"Naomi HANAKATA (Dr)","p":"Assistant Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/naomi-hanakata/","d":"Dr Hanakata is also the Co-Founder of HANAKATA, a research and planning practice based in Singapore. Prior to joining NUS, Dr Hanakata worked as Senior Researcher and Project Coordinator of the Grand Project: Towards Adaptable and Liveable Urban Megaprojects, Thinking Urban Futures, and Waterfront Tanjong Pagar Multidisciplinary Research Project at the Future Cities Laboratory, Singapore-ETH Centre for Global Environmental Sustainability. She obtained her doctorate from ETH Zurich in 2016.","e":["adaptive and strategic planning for high-density urban energy landscapes","planetary urbanization processes","platform urbanization","fostering the role of planning in a sustainable urban development practice"],"ini":"NH","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2021/02/210300_Naomi-Hanakata_s.jpg","gi":[1,4],"si":[4,20]},{"n":"Robin Hartanto HONGGARE (Dr)","p":"Assistant Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/robin-hartanto-honggare/","d":"Robin Hartanto Honggare is a historian working at the intersection of architecture, environmental humanities, and commodity histories. His current book project investigates the extensive network of buildings that enabled commodity production in the Dutch East Indies. Robin received his PhD in Architecture and MS in critical and curatorial practices from Columbia University. He also holds a BArch from Universitas Indonesia. His research has been supported by the Graham Foundation, the Social Science Research Council, the American-Indonesian Cultural & Educational Foundation, and Nieuwe Instituut, where he was involved in the Collecting Otherwise working group.","e":["architecture","environmental humanities","commodity histories","architectural history"],"ini":"RH","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/04/robinh-1.png","gi":[0,2],"si":[0,12]},{"n":"Pieter HERTHOGS (Dr)","p":"Assistant Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/pieter-herthogs/","d":"Pieter Herthogs is Assistant Professor in computational design at the Department of Architecture (DOA), College of Design and Engineering, National University of Singapore. Prof. Herthogs's work combines Design Evaluation and Knowledge Representation to develop approaches that bridge disciplines and domains. Together with his team, he applies these to three design levels: urban system design (city planning, planning regulations, urban modelling & simulation), urban space design (public space quality, walkability), and architectural design (building adaptation & circular construction). Prof.","e":["computational design","Design Evaluation","Knowledge Representation","urban system design"],"ini":"PH","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/06/herthogs.jpeg","gi":[0,1],"si":[0,7,10]},{"n":"Frederick Chando KIM (Dr)","p":"Assistant Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/frederick-chando-kim/","d":"Frederick Chando Kim is an architect, researcher, and educator based in Singapore, serving as an Assistant Professor in Computational Design at the Department of Architecture in the College of Design and Engineering, National University of Singapore. His research focuses on the generative and analytical possibilities of machine learning in architectural form. Frederick pursued his doctorate at the Media x Design Lab at EPFL, where his thesis was nominated for the EPFL Research and City of Lausanne prizes. He previously taught at the School of Architecture and Computer Science at EPFL and was a Junior Faculty member at ETH Zürich.","e":["computational design","machine learning in architectural form","architectural design","urban design"],"ini":"FK","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/08/kim.jpeg","gi":[0,5],"si":[0,24]},{"n":"LI Shengxiao Alex (Dr)","p":"Assistant Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/li-shengxiao/","d":"Dr. Shengxiao (Alex) Li is an Assistant Professor in the Department of Architecture, College of Design and Engineering. As an international urban planning scholar, Alex's research focuses on the transportation policy and planning from the perspectives of inclusiveness and social equity, and mitigating climate change. His research contributes to the impact of population aging on transportation planning and urban planning in general in the United States, equity and travel implications of transit-oriented development in Chinese and American large cities, and travel difficulties of the low-income commuters. Alex holds a PhD.","e":["international urban planning","social equity in transportation","mitigating climate change through transportation policy and planning","impact of population aging on transportation planning and urban planning"],"ini":"LA","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/06/alexli-1.png","gi":[1,4],"si":[5,8,11,20]},{"n":"QI Jinda (Dr)","p":"Assistant Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/qi-jinda/","d":"Dr. Jinda Qi is an assistant professor in the Department of Architecture, College of Design and Engineering. As a landscape architect, his research focuses on how design technology can automate the design process and potentially complement experts' designs, ultimately improving the urban living environment. His work contributes to the AI-based decision-making process for urban heat mitigation and quantitative landscape design for health promotion. Jinda holds a PhD in Built Environment from the University of New South Wales, Sydney. He has extensive working experience in both academic and industry settings across different countries, like Australia, China, New Zealand and Singapore.","e":["design technology for automating the design process","AI-based decision-making for urban heat mitigation","quantitative landscape design for health promotion","improving the urban living environment through design"],"ini":"QJ","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/09/Qi-Jinda.png","gi":[3,4,5],"si":[19,21,25]},{"n":"Saptarshi SANYAL (Dr)","p":"Assistant Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/saptarshi-sanyal/","d":"Saptarshi Sanyal is an architectural historian exploring spaces and buildings as processes rather than just objects in historical narratives. His research questions ideas of modernity, traversing postcolonial studies, construction history, production studies, and the framing of architectural authorship. Saptarshi's current book project adopts a connected histories approach to uncover novel spatial imaginaries and experimentations within architecture during South Asia's colonial rule in the twentieth century.","e":["architectural history","postcolonial studies","construction history","production studies"],"ini":"SS","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/06/sanyal.jpeg","gi":[2],"si":[12]},{"n":"SUPHASIDH Peeraya","p":"Assistant Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/suphasidh-peeraya/","d":"Peeraya Suphasidh is an architect and the founder of Suphasidh Architects. The term 'spatial optimism' best describes the office's method of working, trusting that each project has the innate potential to positively shape the environment and the shared lived experiences. Her research focuses on the performative as well as the expressive nature of material which are rooted in the construction methods and the process through which buildings are made. Her projects are published by Dwell+, Australian Institute of Architecture's Architecture Bulletin, Metropolis Magazine among others.","e":["architecture","fine arts","performative nature of material","expressive nature of material"],"ini":"SP","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/07/peeraya.jpeg","gi":[0],"si":[0,2]},{"n":"Justin D. STERN","p":"Assistant Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/justin-d-stern/","d":"Justin D. Stern is a scholar of urban planning and design with expertise in international and comparative planning, environmental planning, public health, and healthy housing. He is currently Assistant Professor of Urban Planning and Design in the Department of Architecture (DOA) at the National University of Singapore. At DOA, Stern teaches across the urban planning and design programs, offering courses such as Urban ASEAN: The Changing City in Southeast Asia, Qualitative Methods for Urban Planning, Cities and Economic Development, and Critiques of Contemporary Urban Design.","e":["urban planning and design","international and comparative planning","environmental planning","public health"],"ini":"JS","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/07/JustinS.png","gi":[1,4],"si":[5,8,21]},{"n":"Dorothy TANG (Dr)","p":"Assistant Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/dorothy-tang/","d":"Dorothy Tang, PhD, is a landscape architect and assistant professor in the Department of Architecture at the National University of Singapore. Her work is concerned with the intersections of infrastructure and everyday life, especially in communities confronting large-scale environmental change. Her current research explores the histories of water, infrastructure, and urbanization in East Asia, the infrastructural landscapes of foreign investments in Southeast Asia and Africa, and the geopolitics of transnational watershed management. Dorothy is an award-winning educator and was formerly the programme director of the Master of Landscape Architecture programme at NUS from 2022-2024.","e":["landscape architecture","infrastructure development","resource extraction","urbanization processes"],"ini":"DT","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2021/08/tang01.png","gi":[3],"si":[16,18]},{"n":"Joshua Adam COMAROFF","p":"Assistant Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/joshua-adam-comaroff/","d":"Assistant Professor Joshua Comaroff is a designer and cultural geographer. He studied literature and creative writing at Amherst College, before completing the M.Arch and MLA degrees at Harvard Graduate School of Design (the former with distinction). Joshua also received a PhD in geography from the University of California Los Angeles in 2009. Joshua has published writing about architecture, urbanism, religion, and politics, with an Asian focus. In particular, his research focuses upon the effect of material and immaterial practices in the experience of the city, and the affective potentials of architecture.","e":["literature","creative writing","architecture","urbanism"],"ini":"JC","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/07/comaroff_doa-scaled.jpg","gi":[0,2],"si":[0,15]},{"n":"Francois BLANCIAK (Dr)","p":"Associate Professor (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/francois-blanciak/","d":"François Blanciak is a French architect and Associate Professor in the Department of Architecture at the National University of Singapore. His research in the field of architectural history focuses on interwar and post-war modernism, with a particular emphasis on cultural exchanges between Europe and Asia. Seeking to highlight how modern architectural canons have been shaped by non-Western forces, his writings have appeared in New Geographies, October, Architectural Research Quarterly, and Volume, among other journals.","e":["architectural history","interwar modernism","post-war modernism","cultural exchanges between Europe and Asia"],"ini":"FB","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2021/03/Francois-Blanciak-1-JPEG.jpg","gi":[2],"si":[12]},{"n":"LAU Siu-Kit Eddie (Dr)","p":"Associate Professor (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/lau-siu-kit-eddie-dr/","d":"Dr. Lau graduated from the Hong Kong Polytechnic University in 1997, with a Bachelor's degree in Building Services Engineering. He received his Doctor of Philosophy degree in Acoustics in 2003. Prior to taking up his doctoral programme, Dr. Lau worked in the building services engineering industry as a consultant engineer at Daniel Chan & Associates Ltd. in Hong Kong.","e":["building services engineering","acoustics","industrial research and development","energy-efficient systems"],"ini":"LE","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/eddielau.jpg","gi":[0],"si":[1,2]},{"n":"Shinya OKUDA","p":"Associate Professor (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/shinya-okuda/","d":"A/P Okuda is registered architect in Japan and EU, have practiced with Pritzker prize architects, such as Herzog & de Meuron in Switzerland and Shigeru Ban architects in Japan, prior to joining the NUS in 2008. A/P Okuda and his studios past projects include internationally patented Bio Shell (Biodegradable shelter, 2012), award-winning Cloud Arch (Ultra-light long-span structure, 2014), publicly acclaimed Groove Light project at i Light Marina Bay in Singapore (2016). A/P Okuda is appointed as Principal Investigator to develop one of the first Tropical Mass Timber Construction systems by Ministry of National Development, Singapore (Sky Timber project, 2016-).","e":["mass-engineered timber constructions","mass timber architecture in the tropics","innovative mass timber construction systems for high-density urban environment in the tropics","renewable tropical architecture"],"ini":"SO","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/shinya-1.jpg","gi":[0,4,5],"si":[1,22]},{"n":"Ruzica BOZOVIC STAMENOVIC (Dr)","p":"Associate Professor (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/ruzica-bozovic-stamenovic-dr/","d":"Dr Ruzica Bozovic Stamenovic is Associate Professor and Leader of Urbanism Research Cluster at the Department of Architecture, National University of Singapore. Her research interest is in human ecology, health-restoring design processes, and design for wellness in contemporary urban settings and mega-mature societies. She is Faculty Fellow of The Centre for Health Systems and Design, Texas A&M University, Executive Board Member of the UIA Public Health Group and GUPHA (Global University Programs in Healthcare Architecture). She lectured worldwide pointing to the contextual and cultural interpretations of healthful architecture.","e":["human ecology","health-restoring design processes","design for wellness in contemporary urban settings and mega-mature societies","healthful architecture"],"ini":"RS","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/ruzicabozovicstamenovic.jpg","gi":[1,4],"si":[5,21]},{"n":"TAN Beng Kiang (Dr)","p":"Associate Professor (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/tan-beng-kiang-dr/","d":"Associate Professor Tan Beng Kiang is an educator and a registered architect in Singapore with rich practice experience in both the public and private sectors prior to joining academia. She is the former Deputy Head of the National University of Singapore, Department of Architecture and leader of Community and Housing Section. She served as a council member of the Singapore Institute of Architects and currently sits on various technical and advisory committees.","e":["Participatory Community Design & Planning","Service Learning","Social Housing","Design for Aging"],"ini":"TK","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/tanbengkiang.jpg","gi":[1],"si":[5]},{"n":"FUNG John Chye","p":"Associate Professor (Practice Track)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/fung-john-chye/","d":"","e":[],"ini":"FC","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/fungjohnchye-e1561635198148.jpg","gi":[1],"si":[4]},{"n":"Florian HEINZELMANN (Dr)","p":"Associate Professor (Practice Track)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/florian-heinzelmann/","d":"Dr Florian Heinzelmann is a practicing architect with a license in the Netherlands. He obtained his doctorate from Eindhoven University of Technology titled 'Design Method for Adaptive Daylight Systems for Buildings Covered by Large (span) Roofs'. He is co-founder of SHAU in 2009 with offices in Rotterdam (NL), Passau (DE) and Bandung (ID). SHAU is an award-winning practice which received among others Archdaily Building of the Year Award, Architizer A+ Awards, LafargeHolcim Silver Award for the Asia-Pacific region, World Architecture Festival X Award, and a shortlist for the Aga Khan Award for Architecture.","e":["passive climatic design strategies in tropical climates","environmental design","adaptive daylight systems for buildings covered by large-span roofs","material experimentation in architecture"],"ini":"FH","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2021/08/flo_H.jpeg","gi":[0],"si":[1,2]},{"n":"HWANG Yun Hye","p":"Associate Professor (Practice Track)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/hwang-yun-hye/","d":"Yun Hye Hwang is an accredited landscape architect based in Singapore and an Associate Professor in the Landscape Architecture program, where she served as the founding Program Director of the Bachelor of Landscape Architecture (BLA). Her research focuses on the evolving landscape demands within Asian equatorial urban environments, emphasizing sustainable landscape management, the multifunctional role of urban green spaces, and ecological design and planning strategies suited for high-density cities in Asia.","e":["landscape architecture","evolving landscape demands within Asian equatorial urban environments","sustainable landscape management","multifunctional role of urban green spaces"],"ini":"HH","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/hwangyunhye.jpg","gi":[3,4],"si":[17,20]},{"n":"ONG Ker Shing","p":"Associate Professor (Practice Track)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/ong-ker-shing/","d":"Associate Professor Ong Ker-Shing started DOA's Design Summer Camp in 2022, an annual three-week immersive programme introducing participants to the conceptual approaches and skills related to the design professions. Ker-Shing continues to be active in practice.","e":["landscape architecture","design professions","design innovation","qualitative research methods"],"ini":"OS","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/10/ONGKerShing.jpg","gi":[3],"si":[16]},{"n":"Asma KHAWATMI","p":"Associate Professor (Practice Track); Programme Director, MAUD","s":"","u":"https://cde.nus.edu.sg/arch/staffs/asma-khawatmi/","d":"Asma Khawatmi is a French-registered architect and urbanist who runs her own practice in Paris, delivering both national and international projects for public and private sectors. She is currently Associate Professor at the National University of Singapore, College of Design and Engineering – Department of Architecture, and serves as Director of the Master of Arts in Urban Design (MAUD) programme. She teaches urban design studio and theory, and this year also leads the Year 3 Design 4 studio. Since 2001, Asma has combined professional practice with research, teaching, publications, and exhibitions, focusing on both Western and Southeast Asian cities.","e":["sustainable urban development","Western cities","Southeast Asian cities","Asian metropolitan challenges related to energy transition and resilient city-making"],"ini":"AK","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/asmakhawatmi.jpg","gi":[1,4],"si":[4,9,20]},{"n":"CHANG Jiat Hwee (Dr)","p":"Associate Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/chang-jiat-hwee-dr/","d":"Chang Jiat Hwee (PhD, Berkeley) is Dean's Chair Associate Professor at the Department of Architecture, College of Design and Engineering, National University of Singapore. He holds a joint appointment as a Research Leader of the STS (Science, Technology and Society) Cluster at the Asia Research Institute. Jiat Hwee leads the Department's research cluster on history, theory and criticism, and he teaches courses in architectural history and theory, and design. His teaching has been recognized by two University's Annual Teaching Excellence Awards. Jiat Hwee also supervises graduate students and he has served as an external examiner for PhD theses at a number of universities internationally.","e":["history, theory and criticism in architecture","architectural history and theory","environment","science, technology and society (STS)"],"ini":"CH","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/chanjiathwee.jpg","gi":[2],"si":[12]},{"n":"CHO Im Sik (Dr)","p":"Associate Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/cho-im-sik-dr/","d":"CHO Im Sik (PhD) is Associate Professor (tenured) at the Department of Architecture, National University of Singapore (NUS). She has previously served as the Director of the Master of Urban Planning Programme, Leader of Urbanism Research Cluster, and Deputy Head at NUS' Department of Architecture. Her research addresses the challenges and opportunities that Asian cities face with accelerating social change, focusing on the social dimension of sustainable development. Cho Im Sik's research expertise lies in urban space planning for sustainable high-density environments and design for social sustainability involving community-based, participatory approaches.","e":["urban space planning for sustainable high-density environments","design for social sustainability involving community-based, participatory approaches","social dimension of sustainable development","research on HDB neighbourhoods and communities"],"ini":"CS","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/choimsik-1.jpg","gi":[1],"si":[9]},{"n":"Gareth Gerard DOHERTY (Dr)","p":"Associate Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/gareth-gerard-doherty/","d":"","e":[],"ini":"GD","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2026/02/Doherty03a.jpg","gi":[3],"si":[16,17,18]},{"n":"FU Yuming","p":"Associate Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/fu-yuming/","d":"Yuming Fu is an economist striving to understand better the workings of cities and policies that enable cities to succeed. His research contributed new insights into housing choice by households, real estate market price discovery, the efficiency of urban land markets, and labor mobility and resource allocation between cities. His research has been published in top academic journals in the fields of real estate, urban economics, and urban planning, as well as in general journals such as Management Science and American Economic Review. He also contributed to housing and urban policy analysis and advisory for government agencies in China, Hong Kong, and Singapore.","e":["urban economics","urban planning","urban land economics","housing choice by households"],"ini":"FY","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/06/fym.png","gi":[1],"si":[5,8]},{"n":"Joseph LIM (Dr)","p":"Associate Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/joseph-lim-dr/","d":"Dr Joseph Lim has a special interest in prototypical structures addressing emergent spatial and environmental need. His projects have won national and international awards including an Honorable Mention for Lee Treehouse at the Kenneth F. Brown Asia Pacific Culture and Architecture Design Award in 2003; and a Merit Win for Dragon Bridge in URA Southern Ridges Bridge International Design Competition in 2004.","e":["prototypical structures addressing emergent spatial and environmental need","design research","land intensification in industrial architecture","bio-structural analogues in architecture"],"ini":"JL","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/josephlim.jpg","gi":[1],"si":[6]},{"n":"Johannes WIDODO (Dr)","p":"Associate Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/johannes-widodo-dr/","d":"Dr Johannes WIDODO (陳國林, ウィドドヨハネス) is the director of the Tun Tan Cheng Lock Centre for Asian Architectural and Urban Heritage in Melaka of the Department of Architecture, National University of Singapore.","e":["Architectural History, Theory, and Criticism","Urban Design and Urban Studies","Heritage Conservation and Management","Tropical Architecture"],"ini":"JW","img":"","gi":[1,2],"si":[4,12]},{"n":"LIN Yifeng","p":"Associate Professor; Acting Programme Director, BLA (Practice Track)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/lin-yifeng/","d":"Yifeng Lin is a US registered landscape architect and currently serves as an Associate Professor in Practice in the Department of Architecture at NUS. He is also the founding principal of YIYU Design, a landscape architecture practice based in Shanghai and Hong Kong. Lin's design practice focuses on urban transformation, post-industrial regeneration, ecological infrastructure, and the integration of landscape and architecture. He has completed over 20 built projects in China, ranging from gardens and community parks to waterfronts and public cultural landscapes. His work emphasizes the significance of perception and the poetic interrelationship between nature and humanity.","e":["urban transformation","post-industrial regeneration","ecological infrastructure","integration of landscape and architecture"],"ini":"LY","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/08/yifeng.png","gi":[1,2,3,4],"si":[6,13,16,17,20]},{"n":"Rudi STOUFFS (Dr)","p":"Associate Professor; Assistant Dean (Research) (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/rudi-stouffs-dr/","d":"Rudi Stouffs is Associate Professor and Assistant Dean (Research). He leads the Technologies Research Cluster and the Architectural and Urban Prototyping Lab in the Department of Architecture. He is Deputy Programme Lead of the \"Health-driven design for cities (HD4)\" research programme at the Cambridge Centre for Advanced Research and Education in Singapore (CARES) and contributes as a Principal Investigator to the Future Cities Laboratory (FCL) Global research programme at the Singapore ETH Centre (SEC).","e":["Architecture","Computational Design","Architectural Engineering","Computer-Aided Architectural Design Research in Asia"],"ini":"RS","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/rudistouffs.jpg","gi":[0,1,5],"si":[0,24]},{"n":"Nirmal Tulsidas KISHNANI (Dr)","p":"Associate Professor; Co-Programme Director, MSc ISD (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/nirmal-tulsidas-kishnani-dr/","d":"Teaching Areas - Principles of sustainable design (Master of Architecture, MSc Integrated Sustainable Design) - Systems thinking (Master of Architecture, MSc Integrated Sustainable Design) Biography Nirmal Kishnani is Associate Professor at the School of Design and Environment, National University of Singapore (NUS) where is Programme Director of the Master of Science, Integrated Sustainable Design. He teaches sustainable design and researches into how emerging principles of socio-ecological thinking translate to new pathways for practitioners in Asia. He has sat on several advisory panels in China, Singapore and Vietnam shaping policy and formulating guidelines that affect design practice.","e":["sustainable design and development","tropical architecture and environmentalism in SE Asia","systems thinking and complex problems","form (as pathway in socio-ecological design)"],"ini":"NK","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/nirmalkishani.jpg","gi":[0,4],"si":[0,22]},{"n":"Lilian CHEE (Dr)","p":"Associate Professor; Dean's Chair, CDE (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/lilian-chee-dr/","d":"Lilian Chee is Dean's Chair Associate Professor of Architectural Design and Visual Cultures at the National University of Singapore. A writer, curator, and award-winning educator, creative practitioner and researcher, she is recognised internationally for advancing architectural knowledge through feminist, creative, and socially engaged frameworks. Her career integrates research excellence, acclaimed creative practice, impactful design mentorship, and academic leadership. She serves as Assistant Dean (Outreach) at the College of Design and Engineering, Founding Co-Director of the Social Design Lab, and Leader of the Research by Design Cluster.","e":["architectural design","visual cultures","advancing architectural knowledge through feminist, creative, and socially engaged frameworks","domesticity"],"ini":"LC","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/lilianchee.jpg","gi":[0,5],"si":[3,26]},{"n":"CHEAH Kok Ming","p":"Associate Professor; Deputy Head (Academic) (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/cheah-kok-ming/","d":"Architectural education for Kok Ming is developing in students the ability to ask the right questions, research for the understanding to inform the appropriate architectural actions. Form follows enquiry. His design studio is enquiry-led and research-informed, interested in architectural inventions that address high yield on a small land footprint and future-proofing challenges. He curates the Construe & Construct lecture series that examine the tropical designs of emerging architectural practices, setting a platform to investigate the idea of Tropical Tectonics – the articulation of structure, skin and space in the tropical climate and its context.","e":["architectural education","architectural design studio pedagogy","architectural inventions","tropical designs"],"ini":"CM","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/cheahkokming.jpg","gi":[0,4],"si":[0,1,22]},{"n":"Thomas KONG","p":"Associate Professor; Deputy Head (External Relations) (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/thomas-kong/","d":"Thomas Kong received his architecture degree with honours from the National University of Singapore, and a Master of Architecture, with distinction from Cranbrook Academy of Art, USA. He is a licensed architect in Singapore and an associate member of the American Institute of Architects. He has over 20 years of experience teaching architecture and interior architecture in Singapore, Canada, and Chicago and was recently the chair of the professional Master of Architecture (With an Emphasis on Interior Architecture) programme at the School of the Art Institute of Chicago (SAIC).","e":["interior architecture/design education policy","art and design education"],"ini":"TK","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/10/ThomasKONG.jpg","gi":[0],"si":[3]},{"n":"Zdravko TRIVIC (Dr)","p":"Associate Professor; Deputy Head (Graduate Studies); Programme Director, MUP (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/zdravko-trivic-dr/","d":"Zdravko Trivic is Associate Professor and Director of the Master of Urban Planning programme at the Department of Architecture, CDE, NUS. His research interests include: multi-sensorial approach to urbanism; health-supportive and ageing-friendly design; urban spaces in high-density environments; arts, placemaking and participatory design.","e":["multi-sensorial approach to urbanism","health-supportive design","health-supportive and ageing-friendly design","urban spaces in high-density environments"],"ini":"ZT","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/zdravkotrivic.jpg","gi":[1,4],"si":[4,21]},{"n":"LEE Kah-Wee (Dr)","p":"Associate Professor; Deputy Head (Research) (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/lee-kah-wee-dr/","d":"Kah-Wee Lee teaches history and theory of planning and qualitative methods. He works on the relationships between space and power, particularly through the lenses of modern expertise such as architecture, urban planning, law and public administration. His current project, \"Casino Urbanism\", examines the expansion of the casino industry across Singapore, Manila and Macau and asks how licit and illicit channels of capital flow are transforming these cities. Lee's research has been published in the International Journal of Urban and Regional Research, Environment and Planning A and C, Geoforum, and local professional journals.","e":["history and theory of planning","qualitative methods","architecture","urban planning"],"ini":"LK","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/leekahwee.jpg","gi":[0,1,2],"si":[0,4,12,14]},{"n":"Michael BUDIG (Dr)","p":"Associate PROFESSOR; Deputy Programme Director, MArch (Practice Track)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/michael-budig/","d":"Michael Budig is an enthusiastic designer, educator, and technology innovator who operates at the intersections of culture, technology, and entrepreneurship. He is an Associate Professor of Practice in Architecture at the National University of Singapore and the director of the ReAL Lab for Research in Renewable and Regenerative Architecture, which pushes the boundaries of design and construction, driven by digital technologies and a desire to provide innovative solutions for decarbonisation in the built environment. The ReAL Lab engages in cutting-edge research in renewable materials, digitalisation, robotic fabrication, and circular construction.","e":["renewable and regenerative architecture","design and construction","decarbonisation in the built environment","digitalisation"],"ini":"MB","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/04/mb.png","gi":[0,4,5],"si":[1,2,23,26]},{"n":"Emi KIYOTA","p":"Associate Professor; Director, Centre for Environment and Ageing Well (Practice Track)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/emi-kiyota/","d":"Dr Emi Kiyota is an Associate Professor at the Yong Loo Lin School of Medicine and College of Design and Engineering, and Deputy Executive Director, Centre for Population Health at the National University of Singapore. She is an environmental gerontologist, consultant and organizational culture change specialist, with more than 20 years of experience in designing and implementing person-centered care practice in long-term care facilities and hospitals globally.","e":["environmental gerontology","designing and implementing person-centered care practice in long-term care facilities and hospitals globally","quality improvement in the built environment for long-term care and ageing services","pre-design programming for hospitals, senior housing and addiction treatment centres"],"ini":"EK","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/01/emi_k.png","gi":[0,1,4],"si":[0,5,21]},{"n":"Tsuto SAKAMOTO","p":"Associate Professor; Programme Director, MArch (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/tsuto-sakamoto/","d":"Tsuto Sakamoto 坂元 伝 is an Associate Professor at the National University of Singapore (NUS) and the Programme Director of the NUS Master of Architecture Programme. He graduated from Columbia University (M.S.), Waseda University (M.E.), and the Tokyo University of Science (B.E.). He has practiced at Bernard Tschumi Architects and Stan Allen Architects in New York. At NUS, drawing on his background in critical theory and a deep approach to education, he has led and taught design studios at both the undergraduate and graduate levels. He has also conducted research in the areas of history, theory, and criticism.","e":["critical theory","history, theory, and criticism of architecture"],"ini":"TS","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/tsutosakamoto.jpg","gi":[2],"si":[12]},{"n":"YUAN Chao (Dr)","p":"DEAN'S CHAIR; ASSOCIATE PROFESSOR; (TENURE TRACK)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/yuan-chao-dr/","d":"Professor Chao Yuan is a Dean's Chair Associate Professor in the Department of Architecture at the National University of Singapore (NUS), where he leads the Urban Climate Design Lab as Principal Investigator. His work bridges climate science, urban design, and sustainability, and has earned him several prestigious honors, including the Presidential Young Professorship at NUS, the NRF Investigatorship from Singapore's National Research Foundation, and the 2025 Timothy Oke Award from the International Association for Urban Climate, in recognition of his cross-disciplinary leadership in urban climate science and design. Prof.","e":["urban design","urban climate science and design","climate-sensitive strategies for high-density tropical cities","urban wind environments"],"ini":"YC","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/yuan-chao.jpg","gi":[1,4],"si":[4,20,22]},{"n":"WONG Chong Thai Bobby","p":"Honorary Fellow","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/wong-chong-thai-bobby/","d":"","e":[],"ini":"WB","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/wongchongthaibobby.jpg","gi":[0],"si":[0]},{"n":"WONG Yunn Chii (Dr)","p":"Honorary Fellow","s":"","u":"https://cde.nus.edu.sg/arch/staffs/wong-yunn-chii/","d":"","e":[],"ini":"WC","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/wongyunchii.jpg","gi":[2],"si":[12,13]},{"n":"Peggy DEAMER (Dr)","p":"OSM Visiting Professor","s":"Visiting","u":"https://cde.nus.edu.sg/arch/staffs/peggy-deamer/","d":"Peggy Deamer is Professor Emerita of Yale School of Architecture, a founding member of The Architecture Lobby, and principal of the firm Deamer Studio. She is the editor of Architecture and Capitalism: 1845 to the Present and The Architect as Worker: Immaterial Labor, the Creative Class, and the Politics of Design, the author of Architecture and Labor, and a co-author of The Organizer's Guide to Architecture Education. Deamer's theory works, and research explores the relationship between subjectivity, design, and labour in the current economy. She has taught at Princeton University, Barnard College, Columbia University, The Ohio State University, and the University of Kentucky.","e":["architecture","relationship between subjectivity, design, and labour in the current economy"],"ini":"PD","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2026/01/Deamer-1.png","gi":[0],"si":[0]},{"n":"Alakesh DUTTA","p":"Practitioner and Tutor","s":"","u":"https://cde.nus.edu.sg/arch/staffs/alakesh-dutta/","d":"Alakesh has over 11 years of industry experience in projects that have been successful in imbuing a systems-based design thinking. His projects include the NUS SDE4 Net-Zero Energy Building, Urban Farming Projects like the Vertical Fish Farm in Singapore, Integrated Industrial Master Plans – JTC's Juring Innovation District, Urban Design projects like the Orchard Road rejuvenation plan etc.","e":["systems-based design thinking","urban farming","urban design","integrated industrial master planning"],"ini":"AD","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2022/07/dutta.png","gi":[0,1],"si":[1,4]},{"n":"Soo Khian CHAN","p":"Professor (Practice Track)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/soo-khian-chan/","d":"Soo K. Chan is a practicing architect based in Singapore. He is the founding principal and design director of SCDA, a multi-disciplinary firm engaging in architecture, interior, landscape and product design. Mr. Chan is the recipient of several awards, including the inaugural Singapore President's Design Award, Designer of the Year, the SIA-Getz Architecture Prize for Emergent Architecture in Asia and three RIBA Awards. A graduate of Yale University, Mr. Chan is Professor of Architecture (Practice) at the National University of Singapore.","e":["architecture","interior design","landscape design","product design"],"ini":"SC","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/chansookhian.jpg","gi":[0,3],"si":[0,16]},{"n":"Richard HO Kong Fatt","p":"Professor (Practice Track)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/richard-ho-kong-fatt/","d":"Richard Ho graduated from the NUS School of Architecture in 1982 and worked for William S W Lim and Kerry Hill, both eminent Singapore architects, from 1982 to 1985 before venturing to Europe where he worked for six years in Austria and Italy – the last two years in Milan with Aldo Rossi. He returned to Singapore in Nov 1991 and set up RichardHO Architects. In the President's Design Awards 2013, Richard has been awarded the Designer of the Year 2013 – the highest and most prestigious award conferred by the State to a design professional. For the past twenty-seven years, Richard's practice has won a number of international and local architecture awards.","e":["architecture","architectural design"],"ini":"RF","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/richardho.jpg","gi":[0],"si":[0]},{"n":"MOK Wei Wei","p":"Professor (Practice Track)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/mok-wei-wei/","d":"Mok Wei Wei is presently Managing Director of W Architects Pte Ltd. He graduated with a Bachelor of Architecture (Honours) in 1982 from the National University of Singapore. Mok's numerous architectural projects have received critical acclaim both locally and internationally. His works have been featured in numerous regional and international publications. In recognition of his contributions to Singapore's architectural scene, he was conferred the President's Design Award in 2007, the nation's highest honour for design. Mok was a committee member of the Singapore Heritage society from 1995 to 2001.","e":["architecture","design","public service"],"ini":"MW","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/mokweiwei.jpg","gi":[0],"si":[0]},{"n":"Hossein REZAI-JORABI (Dr)","p":"Professor (Practice Track)","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/hossein-rezai-jorabi/","d":"Dr. Rezai is an engineer, a design visionary and an educator. He is a Global Design Director in Ramboll, and a proponent of Regenerative Design and System Thinking in the built environment. One of the initiators of the concept of \"fusion engineering\", he is the first and only engineer to receive the coveted title of \"Designer of the Year\" from the President of Singapore. He is very passionate about the process of advanced computational design, and a holistic approach to architecture + structure + environment.","e":["Regenerative Design","System Thinking in the built environment","advanced computational design","holistic approach to architecture + structure + environment"],"ini":"HR","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/08/Dr-Jorabi-Rezai-Hossein-DOA.jpg","gi":[4,5],"si":[23,24]},{"n":"Rene TAN","p":"Professor (Practice Track)","s":"Adjunct","u":"https://cde.nus.edu.sg/arch/staffs/rene-tan/","d":"Rene Tan, who describes himself as an 'accidental architect', received his BA (double-majoring in architecture and music) from Yale and his MArch from Princeton. Today as Director at RT+Q (a firm he co-founded in 2003 with partner TK Quek), Rene works on projects of various types, scale and sizes—locally and internationally. He was 'Designer of the Year' laureate of the 2016 President's Design Awards, Singapore--an honour he shares with everyone at RT+Q. To maintain work-life balance, Rene searches (with his wife Woei Woei and daughter Lara) for the next ski slope to negotiate, and (for the past 35 years) has been struggling to prevent the complete demise of his skill at the piano.","e":["architecture","music","skiing","piano performance"],"ini":"RT","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/08/k02.png","gi":[0],"si":[0]},{"n":"TAN Kok Hiang","p":"Professor (Practice Track)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/tan-kok-hiang/","d":"Tan Kok Hiang is a Founding Director of Forum Architects Pte Ltd, a firm based in Singapore since 1994. He obtained his Bachelor of Architecture (Hons) from the National University of Singapore in 1987. In 2014, he was named Designer of the Year at the President's Design Awards, Singapore's most prestigious design accolade. He has garnered more 35 design excellence awards. Yale-NUS College, Assyafaah Mosque and Maxwell Chambers also won the Chicago Anthaneum International Awards. Kok Hiang is a Professor(Practice) in the Architectural Department of the National University of Singapore.","e":["architecture","urban design","architectural design excellence","preservation of sites and monuments"],"ini":"TH","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/tankokhiang.jpg","gi":[0,2],"si":[0,13]},{"n":"WONG Mun Summ","p":"Professor (Practice Track); Co-Programme Director, MSc ISD (Practice Track)","s":"Practice Track","u":"https://cde.nus.edu.sg/arch/staffs/wong-mun-summ/","d":"Mun Summ Wong co-founded the Singapore-based architectural practice WOHA in 1994. He is a Professor in Practice at the National University of Singapore's Department of Architecture and co-directs the Integrated Sustainable Design Masters Studio. He is also appointed to the Seidler Chair in the Practice of Architecture at the University of New South Wales in Sydney, Australia. He sits on the Nominating Committee of the Lee Kuan Yew World City Prize, the Design Advisory Board of DesignSingapore Council as well as a Member of the CTBUH Masters of Tall Building and Vertical Urbanism Advisory Panel, in collaboration with the Illinois Institute of Technology.","e":["practice of architecture","tall building and vertical urbanism","integrated sustainable design","environmental solutions to high-rise living"],"ini":"WS","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/woha-portraits-1-recovered.jpg","gi":[0,1],"si":[1,22]},{"n":"TAN Puay Yok (Dr)","p":"Professor (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/tan-puay-yok-dr/","d":"He is the Co-Editor-in-Chief for Landscape and Urban Planning (Elsevier), Associate Editor for Journal of Urban Ecology (Oxford University Press), Editorial Board Member of npj Urban Sustainability (Nature Partner Journals), and Advisory Board Member of The Gardens Bulletin (Singapore Botanic Gardens). He is active in international collaborations, grant reviews and publishes widely in different forums. He also advises on greening policies, landscape design and planning projects in the region as a means of transferring knowledge from the academia to practice.","e":["tropical botany","horticulture","greenery","ecology"],"ini":"TY","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/tanpuayyok.jpg","gi":[3],"si":[16,17]},{"n":"HO Puay Peng (Dr)","p":"Professor; Programme Director, MA ArC (Tenure Track); UNESCO Chair on Architectural Heritage Conservation and Management in Asia","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/ho-puay-peng-dr/","d":"Professor Ho holds the UNESCO Chair on Architectural Heritage Conservation and Management in Asia. Having close to 30 years of experience in the academia, Puay-Peng's main research interests are in architectural history and conservation practices, and how the knowledge can be translated in teaching and practice. Prior to joining NUS in 2017, Puay-Peng was Professor of Architecture and served as Director of School of Architecture and University Dean of Students at The Chinese University of Hong Kong. Sustaining his research is the quest to understand religious culture and its architectural forms. His main focus is Buddhist architecture and ritual of medieval China.","e":["architectural history","conservation practices","religious culture and its architectural forms","Buddhist architecture"],"ini":"HP","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/img-4.jpg","gi":[2],"si":[12,13]},{"n":"LAM Khee Poh (Dr)","p":"PROVOST'S CHAIR PROFESSOR OF ARCHITECTURE AND THE BUILT ENVIRONMENT (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/lam-khee-poh-dr/","d":"Professor Lam is an educator, researcher, architect and consultant who specialises in life cycle building information modelling and computational design support systems for total building performance analysis and building diagnostics. He teaches architectural design (with a focus on systems integration), net zero carbon developments, and \"Well & Green\" built environment. He has completed many major funded research projects in Singapore and the USA, and findings are widely published.","e":["life cycle building information modelling","computational design support systems for total building performance analysis","building diagnostics","architectural design with a focus on systems integration"],"ini":"LP","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/lamkheepoh.jpg","gi":[0,5],"si":[0,24]},{"n":"HENG Chye Kiang (Dr)","p":"Provost's Chair Professor; Deputy Dean, CDE; Advisor to Head; Director of the Centre for Sustainable Asian Cities (CSAC) (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/heng-chye-kiang-dr/","d":"Professor Heng Chye Kiang is the Provost's Professor at the College of Design and Engineering, National University of Singapore, where he was the former Dean of School of Design and Environment (SDE) (2007 to 2016) and the Head of its Department of Architecture prior to his deanship. He teaches and researches urban history, sustainable urban design and planning, and publishes widely in these areas. Professor Heng has served on the boards of government agencies including the URA, HDB, CLC, JTC, BCA and advises academic institutions like SIT, NAFA, CUHK and HKU.","e":["urban history","sustainable urban design and planning","urban planning"],"ini":"HK","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/hengchyekiang.jpg","gi":[1,2],"si":[7,14]},{"n":"Jeffrey HOU (Dr)","p":"Provost's Chair; Professor; Head of Department (Tenure Track)","s":"Tenure Track","u":"https://cde.nus.edu.sg/arch/staffs/jeffrey-hou/","d":"In a career that spans the Pacific, Professor Jeff Hou has worked with indigenous tribes, farmers, fishers, and villagers in Asia and inner-city immigrant youths and elders in North American cities, on projects ranging from the conservation of wildlife habitats to bottom-up urban placemaking. Before his appointment as the Head of the Department at DOA in 2024, Hou was Professor of Landscape Architecture and led the Urban Commons Lab at the University of Washington (UW), Seattle. He served as Chair of Landscape Architecture at UW from 2009 to 2017.","e":["conservation of wildlife habitats","bottom-up urban placemaking","civic engagement","environmental planning"],"ini":"JH","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2024/04/jhou.png","gi":[1,3],"si":[5,10,17]},{"n":"Nikhil JOSHI (Dr)","p":"Senior Lecturer (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/nikhil-joshi-dr/","d":"Nikhil Joshi is a Senior Lecturer in the Department of Architecture at the National University of Singapore (NUS). Educated at the University of Pune (India), University of York (UK) and National University of Singapore (Singapore). His research interests include cultural heritage management; traditional building materials and techniques; and community participatory approaches. Before joining NUS, Nikhil worked and taught in India, UK, and Malaysia for over a decade. He is a Fellow of the Royal Geographical Society, UK, and recipient of the Society for the Protection of Ancient Buildings – Lethaby Scholarship, UK.","e":["cultural heritage management","traditional building materials and techniques","community participatory approaches","urban heritage"],"ini":"NJ","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/10/Nikhil.jpg","gi":[0,1,2],"si":[2,5,13]},{"n":"Imran Bin TAJUDEEN (Dr)","p":"Senior Lecturer (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/imran-bin-tajudeen-dr/","d":"Dr Imran bin Tajudeen researches cultural encounters through architecture across the longue durée and examines the vernacular city and its heritage tropes. His doctoral dissertation on this topic (NUS, 2009) won the ICAS Book Prize in 2011. He is co-editor of Southeast Asia's Modern Architecture (2018) and was postdoctoral fellow at MIT's Aga Khan Program (2009–10) and the IIAS in Leiden (2010–11). He was also Mutawa Visiting Fellow at OXCIS (Oxford, 2019-2020; 2022). Dr Imran teaches topics on identity and representation through the arts, urban history, and built cultural heritage in maritime Southeast Asia, focusing on Singapore and maritime Southeast Asia.","e":["cultural encounters through architecture across the longue durée","vernacular city and its heritage tropes","identity and representation through the arts","urban history"],"ini":"IT","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/imranbintajudeen.jpg","gi":[2],"si":[14,15]},{"n":"Terrence TAN Chun Liang (Dr)","p":"Senior Lecturer (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/terrence-tan-chun-liang-dr/","d":"Dr Tan graduated from the NUS BA (Architecture) and Master of Architecture programmes and received his doctorate from the Department of Building where he was appointed as Research Fellow since 2017. He is the PI /Co-PI of various research projects with government agencies and industry partners focusing on urban greenery. His research interests include ground level greenery, vertical and rooftop greenery, urban climatic mapping and simulation, as well as Landscape Design Optimisation. BOOK URBAN GREENING TECHNIQUES: AN INTRODUCTION THIS BOOK PROVIDES AN INTRODUCTION TO THE VARIOUS TECHNOLOGIES AND TECHNIQUES THAT FACILITATE THE URBAN GREENING PROCESS.","e":["urban greenery","ground level greenery","vertical greenery","rooftop greenery"],"ini":"TL","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2020/07/tcl.jpg","gi":[3,4],"si":[17,19,21]},{"n":"Shin YOKOO","p":"Senior Lecturer (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/shin-yokoo/","d":"Shin YOKOO is a Senior Lecturer at the Department of Architecture, CDE, NUS. Founded Ouvi as a registered senior architect of Japan in 2004 after completing a master's degree in architecture at the Tokai University Graduate School of Engineering and working at the Masahiro Ikeda Architectural Studio. Earned a PhD (Engineering) from the Tokyo University of Science Graduate School of Science and Technology in 2016. Notable works include the House in Nakago (2021; collaboration with Snark), 4 Episodes (2014; Atelier Nishikata), and Jukkaie (2009; collaboration with Point). He currently teaches design studios and Architectural Tectonics at NUS since 2020.","e":["Architectural Tectonics","architectural design","environmental design","structural design"],"ini":"SY","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2022/02/shin01.png","gi":[0],"si":[0,1]},{"n":"Maxime Cedric DECAUDIN (Dr)","p":"Senior Lecturer; Acting Deputy Programme Director, BLA (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/maxime-cedric-decaudin/","d":"Dr Maxime Decaudin is a Senior Lecturer in landscape architecture. Situated at the intersection of landscape studies and environmental history, his research examines the historical agency of nature in Asian contexts. He completed a PhD in Art History at Sorbonne Université titled 'A Barren Rock': An Environmental History of Hong Kong Landscapes under British Colonization, 1794-1898. Prior to joining NUS, Maxime taught landscape architecture at the University of Hong Kong for ten years. In 2019, he was emerging curator at the Canadian Centre for Architecture (CCA) and in 2017, he was a doctoral fellow at the French Centre for Research on Contemporary China (CEFC).","e":["landscape architecture","landscape studies","environmental history of Hong Kong landscapes under British colonization, 1794-1898","Art History"],"ini":"MD","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2022/10/decaudin01.png","gi":[2,3],"si":[12,16,18]},{"n":"LIN Shengwei Ervine","p":"SENIOR LECTURER; Deputy Head (Admin and Finance) (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/lin-shengwei-ervine/","d":"Technological advancements have always influenced how we alter the landscape. Even the invention of the hoe and axe allowed early humans to irrigate fields and clear forests. In an age whereby digital tools are readily available to record, study and understand the world around us, how then do these modern tools affect landscape design and planning processes and direct them towards more ecologically and culturally sensitive outcomes?","e":["landscape design","landscape planning"],"ini":"LE","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/10/Ervine.jpg","gi":[3],"si":[16]},{"n":"Federico RUBERTO (Dr)","p":"Senior Lecturer; Programme Director, BA Arch (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/federico-ruberto/","d":"Federico Ruberto is a writer and designer working between philosophy and design. He holds a PhD [summa cum laude] in \"Philosophy, Art and Critical Thought\" from the European Graduate School, an inquiry on the concept of \"contingency\" in formal/natural languages. He researches, produces and curates textual and material projects that intersect digital (platforms) and physical space (buildings), spatial structures (planetary urbanism), political economy, technology (of self) and (artificial) ecology.","e":["philosophy and design","PhD-level expertise in \"Philosophy, Art and Critical Thought\"","digital platforms","physical space and buildings"],"ini":"FR","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2021/08/pic01.png","gi":[1,2],"si":[4,15]},{"n":"MARSHALL Victoria Jane (Dr)","p":"Senior Lecturer; Programme Director, MLA (Educator Track)","s":"Educator Track","u":"https://cde.nus.edu.sg/arch/staffs/marshall-victoria-jane/","d":"Dr Victoria Jane Marshall is a Senior Lecturer and Director of the MLA programme at the Department of Architecture, National University of Singapore (NUS). Marshall has a PhD in geography from NUS, Singapore (2021), a Master of Landscape Architecture and a Certificate in Urban Design from the University of Pennsylvania, USA (1997), and a Bachelor of Landscape Architecture from the University of New South Wales, Australia (1992).","e":["geography","landscape architecture","urban design","urban studies"],"ini":"MJ","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2021/08/marshallhead.png","gi":[1,3],"si":[4,16]},{"n":"Xiaoxuan LU (Dr)","p":"Visiting Associate Professor","s":"Visiting","u":"https://cde.nus.edu.sg/arch/staffs/xiaoxuan-lu/","d":"Xiaoxuan Lu is a landscape scholar and designer. Prior to her appointment at the National University of Singapore (NUS), she taught at several prestigious universities in Asia, including the University of Hong Kong (HKU), where she served as Director of the Bachelor of Arts in Landscape Studies program. Specializing in territorial-scale landscape analysis and planning, Lu employs critical cartography, photography, and videography in her design research to develop new theoretical framings for socio-spatial phenomena, alternative toolkits for spatial intervention, and practical advisory references for policymakers.","e":["territorial-scale landscape analysis and planning","human geography","landscape studies"],"ini":"XL","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/07/luxx.jpeg","gi":[3],"si":[16]},{"n":"Jayde LIN ROBERTS (Dr)","p":"Visiting Associate Professor","s":"Visiting","u":"https://cde.nus.edu.sg/arch/staffs/jayde-lin-roberts/","d":"Jayde Lin Roberts is Visiting Associate Professor at the Department of Architecture (DOA), College of Design and Engineering, National University of Singapore. Prof. Roberts, an interdisciplinary scholar, combines spatial and historical analysis with ethnographic research to examine heritage-making, urban informality, and the effects of transnational networks. She was a Fulbright US Scholar in Yangon, Myanmar (2016-2018) and has published in the International Journal of Heritage Studies, Critical Asian Studies and others, as well as a monograph titled, Mapping Chinese Rangoon: Place and Nation among the Sino-Burmese.","e":["spatial analysis","historical analysis","ethnographic research","heritage-making"],"ini":"JR","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/07/Jayde-Lin-Roberts.jpg","gi":[2],"si":[14]},{"n":"H. Koon WEE","p":"Visiting Associate Professor","s":"Visiting","u":"https://cde.nus.edu.sg/arch/staffs/h-koon-wee/","d":"H. Koon Wee is Visiting Associate Professor at the Department of Architecture and NUS Cities. He directs the NUS Cities undergraduate education programme, where he co-developed the Minor in Cities, Cities Summer Programme and the Core Curriculum \"Liveable Cities\" module. Most recently, he led a multi-programme research studio that brought together students from M.Arch, MUP, MAUD and MLA in the re-envisioning of the G2G Suzhou Industrial Park. Formerly at HKU, he was founding director of the Cities in Asia Programme, and academic director of the HKU Shanghai Study Centre, where he led core courses in the history & theory of cities, globalisation, design and others.","e":["history and theory of cities","globalisation","design","modernisation"],"ini":"HW","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2019/06/choice02a.png","gi":[1,2],"si":[6,12]},{"n":"Casey Nai-Huei WANG","p":"VISITING SENIOR FELLOW","s":"Visiting","u":"https://cde.nus.edu.sg/arch/staffs/wang-nai-huei/","d":"Casey Wang is a practitioner and educator in architecture and urbanism active in Greater China. She is the founder of multidisciplinary design practice, BLEND. She received a Bachelor of Science in Architecture from National Cheng Kung University and a Master of Architecture in Urban Design from the Harvard University Graduate School of Design (GSD). Her academic and professional practice and research is primarily focused on architectural / urban design and urban infrastructure. Her early work and experience was in Shanghai from 2003-2005.","e":["architecture","urbanism","architectural design","urban design"],"ini":"CW","img":"https://cde.nus.edu.sg/arch/wp-content/uploads/sites/32/2025/01/casey_w-scaled.jpg","gi":[0,1],"si":[0,4]}],"groups":[{"n":"Architecture Design","c":44},{"n":"Urban Design & Planning","c":42},{"n":"History, Theory & Heritage","c":23},{"n":"Landscape Studies","c":18},{"n":"Sustainability, Climate & Resilience","c":19},{"n":"Technologies, Computation & Data","c":11}],"subgroups":[{"g":"Architecture Design","name":"Spatial Design","count":32},{"g":"Architecture Design","name":"Sustainable & Environmental Design","count":12},{"g":"Architecture Design","name":"Material & Building Systems","count":5},{"g":"Architecture Design","name":"Interior & Exhibition Design","count":5},{"g":"Urban Design & Planning","name":"Urban Studies & Urbanism","count":20},{"g":"Urban Design & Planning","name":"Housing, Community & Social Equity","count":12},{"g":"Urban Design & Planning","name":"Urban Regeneration & Transformation","count":8},{"g":"Urban Design & Planning","name":"City & Regional Planning","count":7},{"g":"Urban Design & Planning","name":"Policy, Governance & Implementation","count":6},{"g":"Urban Design & Planning","name":"Sustainable Development","count":4},{"g":"Urban Design & Planning","name":"Public Space & Placemaking","count":4},{"g":"Urban Design & Planning","name":"Transport & Mobility","count":1},{"g":"History, Theory & Heritage","name":"Architectural History, Theory & Criticism","count":12},{"g":"History, Theory & Heritage","name":"Heritage Conservation & Management","count":7},{"g":"History, Theory & Heritage","name":"Urban History & Asian Urbanism","count":6},{"g":"History, Theory & Heritage","name":"Cultural Sustainability & Critical Spatial Studies","count":3},{"g":"Landscape Studies","name":"Landscape Architecture & Design","count":14},{"g":"Landscape Studies","name":"Urban Ecology","count":7},{"g":"Landscape Studies","name":"Environmental History","count":3},{"g":"Landscape Studies","name":"Digital Landscape Methods","count":2},{"g":"Sustainability, Climate & Resilience","name":"Urban Resilience & Climate Adaptation","count":7},{"g":"Sustainability, Climate & Resilience","name":"Health, Wellbeing & Environmental Performance","count":6},{"g":"Sustainability, Climate & Resilience","name":"Climate-Responsive Architecture","count":5},{"g":"Sustainability, Climate & Resilience","name":"Sustainable Design & Integrated Systems","count":3},{"g":"Technologies, Computation & Data","name":"Computational Design","count":4},{"g":"Technologies, Computation & Data","name":"Urban Analytics & Data Science","count":3},{"g":"Technologies, Computation & Data","name":"Digital Platforms & Spatial Media","count":2}]};
+
+// Orange / yellow / amber / gray palette — NO blue, green or Morandi
+const GCOLORS = [
+  '#525252',  // Architecture Design — dark gray
+  '#ef7c00',  // Urban Design & Planning — NUS orange
+  '#8b4513',  // History, Theory & Heritage — saddle brown / amber
+  '#d4a017',  // Landscape Studies — dark gold
+  '#f5a623',  // Sustainability, Climate & Resilience — bright orange
+  '#8a8a8a',  // Technologies, Computation & Data — medium gray
+];
+
+const groups = D.groups;
+const subgroups = D.subgroups;
+const people = D.people.map((p,i)=>({...p, idx:i, primaryGi: p.gi[0] ?? 0}));
+
+document.getElementById('sN').textContent = people.length;
+document.getElementById('sG').textContent = groups.length;
+document.getElementById('sSG').textContent = subgroups.length;
+
+// ═══════════════════════════
+//  EDGES — connect faculty who share one or more expertise themes.
+//  Crucially, ONE merged edge per pair, not one per shared theme.
+//  weight = number of shared subgroups → drives stroke thickness/opacity.
+//  This avoids the false impression that large subgroups have "tighter"
+//  connections (they only have more pairs, not stronger ties).
+// ═══════════════════════════
+const subgroupGi = subgroups.map(s => groups.findIndex(g => g.n === s.g));
+
+// Defined early so both the DRAW block (for sizing circles) and the FORCE
+// block (for per-node strength/collide) can reference it.
+const spatialDesignSi = subgroups.findIndex(s => s.name === 'Spatial Design');
+const isSpatial = p => spatialDesignSi >= 0 && p.si.includes(spatialDesignSi);
+const xyStrength = p => isSpatial(p) ? 0.025 : 0.055;
+
+const edgeMap = new Map();
+for (let si = 0; si < subgroups.length; si++) {
+  const members = people.filter(p => p.si.includes(si));
+  for (let i = 0; i < members.length; i++) {
+    for (let j = i + 1; j < members.length; j++) {
+      const a = members[i].idx, b = members[j].idx;
+      const key = a < b ? `${a}-${b}` : `${b}-${a}`;
+      if (!edgeMap.has(key)) {
+        edgeMap.set(key, { source: a, target: b, sis: [], gis: [], weight: 0 });
+      }
+      const e = edgeMap.get(key);
+      e.sis.push(si);
+      e.weight += 1;
+    }
+  }
+}
+const edges = Array.from(edgeMap.values()).map(e => {
+  e.gis = e.sis.map(si => subgroupGi[si]);
+  // Primary group for color = mode of shared subgroups' parent groups.
+  // Most pairs share themes within a single group, so this is usually
+  // unambiguous; for genuinely cross-group ties, we colour by majority.
+  const counts = {};
+  let primaryGi = e.gis[0], maxCount = 0;
+  for (const g of e.gis) {
+    counts[g] = (counts[g] || 0) + 1;
+    if (counts[g] > maxCount) { maxCount = counts[g]; primaryGi = g; }
+  }
+  e.gi = primaryGi;
+  return e;
+});
+
+// ═══════════════════════════
+//  LAYOUT
+// ═══════════════════════════
+const mEl = document.querySelector('.main');
+const W = mEl.clientWidth, H = mEl.clientHeight;
+const cx = W/2, cy = H/2;
+const svg = d3.select('#svg').attr('viewBox', `0 0 ${W} ${H}`);
+
+// Set up zoom
+const viewport = svg.append('g');
+const zoom = d3.zoom().scaleExtent([0.5, 4]).on('zoom', e => {
+  viewport.attr('transform', e.transform);
+  const k = e.transform.k;
+  // ── Zoom-level text hierarchy ──
+  // Group labels: fully visible at overview, fade out by the time we enter
+  // group-focus zoom (focusGroup now targets maxScale 1.45).
+  const groupLabelOpacity = k <= 1.05 ? 1
+    : k >= 1.35 ? 0
+    : 1 - (k - 1.05) / 0.30;
+  if (typeof groupLabelG !== 'undefined') {
+    groupLabelG.style('opacity', groupLabelOpacity)
+               .style('pointer-events', groupLabelOpacity < 0.15 ? 'none' : null);
+  }
+  // Sub-labels: visible but soft at overview (so user sees all theme names
+  // without them competing with group banners + person names). Ramp to full
+  // visibility at any zoom-in state.
+  const subLabelOpacity = k <= 1.05 ? 0.55
+    : k >= 1.15 ? 0.95
+    : 0.55 + (k - 1.05) / 0.10 * 0.40;
+  if (typeof subLabelG !== 'undefined') {
+    subLabelG.style('opacity', subLabelOpacity);
+  }
+});
+svg.call(zoom).on('dblclick.zoom', null);
+
+// ── Camera helpers ──
+const PANEL_W = 340;
+// Legend is fixed at top-right (width 230 + ~14 right margin). Even when
+// the person-detail panel is closed, the legend overlays the right edge,
+// so focusBounds must reserve that strip — otherwise sub-labels positioned
+// on the right side of the canvas (e.g. History group's first subgroup,
+// or any subgroup whose ring position points east) get hidden behind it.
+const LEGEND_W = 250;
+function focusBounds(pts, {pad=80, panelOpen=false, maxScale=2.0, duration=850} = {}) {
+  if (!pts.length) return;
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const bw = Math.max(maxX - minX, 60);
+  const bh = Math.max(maxY - minY, 60);
+  // panel takes priority over legend when both would compete for the
+  // right strip (panel is wider and overlaps the legend anyway).
+  const rightReserve = panelOpen ? PANEL_W : LEGEND_W;
+  const availW = W - rightReserve - pad * 2;
+  const availH = H - pad * 2;
+  const scale = Math.max(0.5, Math.min(availW / bw, availH / bh, maxScale));
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  const tx = (W - rightReserve) / 2 - scale * centerX;
+  const ty = H / 2 - scale * centerY;
+  svg.transition().duration(duration).ease(d3.easeCubicInOut)
+    .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+}
+
+function focusOverview(duration = 800) {
+  // Slight zoom-out so all groups + perimeter sub-labels + person names
+  // fit comfortably without clipping at edges. Centre the *actual content
+  // bbox* (not the canvas geometric centre) in the visible area, so that
+  // pinned orphans above the hexagon don't bias everything upward.
+  const scale = 0.80;
+  const xs = people.map(p => p.x || cx), ys = people.map(p => p.y || cy);
+  const contentCx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const contentCy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const tx = (W - LEGEND_W) / 2 - scale * contentCx;
+  const ty = H / 2 - scale * contentCy;
+  svg.transition().duration(duration).ease(d3.easeCubicInOut)
+    .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+}
+
+function focusGroup(gi, duration = 850) {
+  const members = people.filter(p => p.gi.includes(gi));
+  if (!members.length) return;
+  // Less aggressive zoom + more pad: when entering a group, you want to
+  // see its subgroup structure laid out, not have nodes pressed to the edges.
+  focusBounds(members, {pad: 120, panelOpen: false, maxScale: 1.45, duration});
+}
+
+function focusSub(si, duration = 850) {
+  const members = people.filter(p => p.si.includes(si));
+  if (!members.length) return;
+  // Same label-position formula as tick() — member centroid + ring-direction
+  // push. This keeps the label close to the actual cluster, so focusBounds
+  // doesn't have to stretch the bbox across a distant nominal ring slot.
+  const cx_mem = members.reduce((acc, p) => acc + p.x, 0) / members.length;
+  const cy_mem = members.reduce((acc, p) => acc + p.y, 0) / members.length;
+  const gi = subgroupGi[si];
+  const gC = groupCenters[gi];
+  const sC = subgroupCenters[si];
+  const dx = sC.x - gC.x, dy = sC.y - gC.y;
+  const dist = Math.hypot(dx, dy);
+  const OUT = 22;
+  const lx = dist > 0.5 ? cx_mem + (dx / dist) * OUT : cx_mem;
+  const ly = dist > 0.5 ? cy_mem + (dy / dist) * OUT : cy_mem;
+  const LABEL_HALF = 150;
+  const labelExtents = [
+    { x: lx - LABEL_HALF, y: ly },
+    { x: lx + LABEL_HALF, y: ly },
+  ];
+  focusBounds([...members, ...labelExtents], {pad: 100, panelOpen: false, maxScale: 2.1, duration});
+}
+
+function focusPerson(d, duration = 850) {
+  // Include person + connected nodes
+  const connected = new Set([d.idx]);
+  edges.forEach(e => {
+    if (e.source.idx === d.idx) connected.add(e.target.idx);
+    if (e.target.idx === d.idx) connected.add(e.source.idx);
+  });
+  const pts = people.filter(p => connected.has(p.idx));
+  focusBounds(pts, {pad: 100, panelOpen: true, maxScale: 1.8, duration});
+}
+
+// Initial target positions: 6 group centers in hexagonal arrangement
+// Tightened R so groups feel more cohesive (less scattered overall).
+const R = Math.min(W, H) * 0.28;
+const groupCenters = groups.map((g, i) => {
+  const a = (i / groups.length) * Math.PI * 2 - Math.PI/2;
+  return {x: cx + R * Math.cos(a), y: cy + R * Math.sin(a)};
+});
+
+// Subgroup target positions: clustered within their parent group, at sub-radius
+const subgroupCenters = subgroups.map((s, si) => {
+  const gi = subgroupGi[si];
+  const gCenter = groupCenters[gi];
+  // Find this subgroup's index within its group
+  const groupSubs = subgroups.map((s2, j) => ({s2, j})).filter(x => subgroupGi[x.j] === gi);
+  const subIdxWithinGroup = groupSubs.findIndex(x => x.j === si);
+  const subCount = groupSubs.length;
+  if (subCount === 1) return {x: gCenter.x, y: gCenter.y};
+  // Distribute around the group center.
+  // Sub-radius scales with parent group population so dense groups
+  // (Architecture Design ~44, Urban Design & Planning ~42) get noticeably
+  // more internal breathing room. Numbers are tuned so that with R=0.33,
+  // adjacent groups still keep ~36px clearance between their subgroup rings.
+  const groupPop = groups[gi].c || 10;
+  const subR = Math.min(W, H) * 0.085 * (0.9 + Math.min(0.75, groupPop / 55));
+  const a = (subIdxWithinGroup / subCount) * Math.PI * 2;
+  return {x: gCenter.x + subR * Math.cos(a), y: gCenter.y + subR * Math.sin(a)};
+});
+
+// Push Spatial Design's centre further outward (rightward, since its angle
+// is 0° from Architecture Design's group centre). With 32 members crammed
+// around one attractor, the default position produces a dense black clique
+// near Architecture's right side. Shifting the centre east by ~10% of the
+// canvas gives the cluster room to spread laterally into the empty area
+// to the right of the hexagon's upper-right vertex.
+{
+  const sdsi = subgroups.findIndex(s => s.name === 'Spatial Design');
+  if (sdsi >= 0) {
+    const sC = subgroupCenters[sdsi];
+    const gC = groupCenters[subgroupGi[sdsi]];
+    const dx = sC.x - gC.x, dy = sC.y - gC.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 0.5) {
+      const PUSH = Math.min(W, H) * 0.16;
+      subgroupCenters[sdsi] = {
+        x: sC.x + (dx / dist) * PUSH,
+        y: sC.y + (dy / dist) * PUSH,
+      };
+    }
+  }
+}
+
+// Initial position for each person: average of their subgroup centers (or group center)
+people.forEach(p => {
+  if (p.si.length > 0) {
+    const cs = p.si.map(si => subgroupCenters[si]);
+    p.x = cs.reduce((s,c) => s+c.x, 0) / cs.length + (Math.random()-.5)*30;
+    p.y = cs.reduce((s,c) => s+c.y, 0) / cs.length + (Math.random()-.5)*30;
+  } else {
+    p.x = cx; p.y = cy;
+  }
+});
+
+// ═══════════════════════════
+//  DRAW
+// ═══════════════════════════
+// Layer order: edges (back) → person nodes → subgroup labels → group labels (front)
+const edgeG = viewport.append('g').attr('class', 'edges');
+const nodeG = viewport.append('g').attr('class', 'nodes');
+const subLabelG = viewport.append('g').attr('class', 'sub-labels');
+const groupLabelG = viewport.append('g').attr('class', 'group-labels');
+
+// Edges
+// stroke-width and -opacity scale with weight (= # shared themes) via
+// CSS custom properties so the .lit / .dim states still apply cleanly.
+const edgeEls = edgeG.selectAll('line').data(edges).join('line')
+  .attr('class', 'edge')
+  .attr('stroke', d => GCOLORS[d.gi])
+  .style('--w', d => 0.144 + d.weight * 0.176)
+  .style('--o', d => 0.066 + Math.min(0.198, d.weight * 0.0495));
+
+// Person nodes
+const nodeEls = nodeG.selectAll('g').data(people).join('g')
+  .attr('class', 'pnode')
+  .attr('data-pi', d => d.idx);
+
+nodeEls.append('circle')
+  .attr('r', d => {
+    const baseR = 3 + Math.min(5, d.si.length * 0.6);
+    // Spatial Design members get slightly smaller dots — the area already
+    // has 32 nodes in close proximity, big circles compound the density.
+    return isSpatial(d) ? Math.max(3, baseR - 1) : baseR;
+  })
+  .attr('fill', d => GCOLORS[d.primaryGi])
+  .attr('stroke', '#fff')
+  .attr('stroke-width', 0.75);
+
+// Person name label (always visible, small)
+nodeEls.append('text')
+  .attr('class', 'pname-arc')
+  .attr('dy', d => -(3 + Math.min(5, d.si.length * 0.6)) - 4)
+  .attr('text-anchor', 'middle')
+  .text(d => {
+    // Use full name but remove (Dr) etc
+    let n = d.n.replace(/\s*\(.*?\)\s*/g, '').trim();
+    return n.length > 24 ? n.slice(0, 22) + '…' : n;
+  });
+
+// Group labels (placed at centroid - computed after sim)
+const groupLabelEls = groupLabelG.selectAll('g').data(groups).join('g')
+  .attr('class', 'group-label-grp')
+  .attr('data-gi', (d, i) => i);
+
+groupLabelEls.append('text')
+  .attr('class', 'group-label')
+  .attr('fill', (d, i) => GCOLORS[i])
+  .attr('font-size', d => 17 + Math.min(7, d.c * 0.2))
+  .each(function(d) {
+    const t = d3.select(this);
+    const words = d.n.split(/\s+/);
+    const lines = [];
+    let line = '';
+    words.forEach(w => {
+      if ((line + ' ' + w).length > 14) { lines.push(line); line = w; }
+      else line = line ? line + ' ' + w : w;
+    });
+    if (line) lines.push(line);
+    lines.forEach((ln, i) => {
+      t.append('tspan').attr('x', 0).attr('dy', i === 0 ? -(lines.length-1)*7 : 16).text(ln);
+    });
+  });
+
+// Subgroup labels (hidden by default, shown on group hover/select)
+const subLabelEls = subLabelG.selectAll('text').data(subgroups).join('text')
+  .attr('class', 'sub-label')
+  .attr('data-sgi', (d, i) => i)
+  .text(d => d.name);
+
+// ═══════════════════════════
+//  FORCE SIMULATION
+// ═══════════════════════════
+// Loosen attraction only for Spatial Design members (the densest subgroup,
+// 32 people). xy strength drops more aggressively, and we add extra collide
+// padding so the 496 internal pairs don't pile their lines into a dense
+// black smear in the middle of Architecture Design.
+// (spatialDesignSi / isSpatial / xyStrength are defined earlier so the
+// DRAW block can also reference them when sizing Spatial Design circles.)
+
+// Pin faculty with no group/subgroup data (e.g. TAN Teck Kiam, TEH Joo Heng
+// whose bios are blank in the source). Otherwise they get pushed to the
+// canvas edges by everyone else's charge — leaving stranded dots at the
+// bottom of the layout that look like accidents. Place them in a horizontal
+// row ABOVE the entire hexagon — the only zone guaranteed to be free of
+// group-label centroids (which now sit closer to canvas centre with R=0.28).
+const orphans = people.filter(p => p.si.length === 0);
+const orphanSpacing = 110;
+const orphanY = cy - R - 55;
+orphans.forEach((p, i) => {
+  p.fx = cx - (orphans.length - 1) * orphanSpacing / 2 + i * orphanSpacing;
+  p.fy = orphanY;
+});
+
+const sim = d3.forceSimulation(people)
+  .force('link', d3.forceLink(edges)
+    .id(d => d.idx)
+    // Dynamic link distance: hubs (people in many subgroups) sit further
+    // apart from each other than peripheral nodes. Spatial Design edges
+    // get an even larger preferred distance so the 32-node clique opens up.
+    .distance(d => {
+      const sDeg = d.source.si ? d.source.si.length : 1;
+      const tDeg = d.target.si ? d.target.si.length : 1;
+      const isSpatialEdge = d.sis && d.sis.includes(spatialDesignSi);
+      if (isSpatialEdge) return 105 + Math.min(38, (sDeg + tDeg) * 4.5);
+      return 95 + Math.min(35, (sDeg + tDeg) * 4);
+    })
+    // Spatial Design has 496 internal edges — at the default 0.035 strength
+    // the cluster ties itself into a tight black knot. 0.020 keeps cluster
+    // identity (members visibly belong together) while staying loose enough
+    // for charge / collide to open up the centre instead of compacting it.
+    .strength(d => {
+      const isSpatialEdge = d.sis && d.sis.includes(spatialDesignSi);
+      return isSpatialEdge ? 0.020 : 0.035;
+    }))
+  .force('charge', d3.forceManyBody().strength(-250))
+  // Dynamic collide: high-degree nodes claim slightly more space, matching
+  // their larger circle radius (r = 3 + min(5, si.length * 0.6)).
+  // Spatial Design members get substantially extra padding — with 32 members
+  // and 496 internal edges, modest +5 padding can't compete with link tension.
+  .force('collide', d3.forceCollide(d => {
+    const base = 25 + Math.min(9, d.si.length * 1.6);
+    return isSpatial(d) ? base + 6 : base;
+  }).strength(1))
+  .force('x', d3.forceX(p => {
+    // Attract to average subgroup x
+    if (p.si.length === 0) return cx;
+    return p.si.reduce((s, si) => s + subgroupCenters[si].x, 0) / p.si.length;
+  }).strength(xyStrength))
+  .force('y', d3.forceY(p => {
+    if (p.si.length === 0) return cy;
+    return p.si.reduce((s, si) => s + subgroupCenters[si].y, 0) / p.si.length;
+  }).strength(xyStrength))
+  .alphaDecay(0.016)
+  .on('tick', tick);
+
+function tick() {
+  edgeEls
+    .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+  nodeEls.attr('transform', d => `translate(${d.x},${d.y})`);
+  // Update group label positions to centroids
+  groups.forEach((g, gi) => {
+    const members = people.filter(p => p.gi.includes(gi));
+    if (members.length === 0) return;
+    const cx = members.reduce((s, p) => s + p.x, 0) / members.length;
+    const cy = members.reduce((s, p) => s + p.y, 0) / members.length;
+    d3.select(groupLabelEls.nodes()[gi]).attr('transform', `translate(${cx},${cy})`);
+  });
+  // Sub-label positions — anchor each label at its members' centroid, then
+  // nudge it in the "outward from group center" direction so overlapping
+  // subgroups (Urban Design's 8 subs, etc.) don't pile up at the group's
+  // geometric centre. This keeps labels close to where members actually
+  // ended up after simulation (important for sparse subgroups where
+  // members drift far from their nominal ring slot), while still
+  // separating densely overlapping ones by direction.
+  subgroups.forEach((s, si) => {
+    const members = people.filter(p => p.si.includes(si));
+    if (members.length === 0) return;
+    const cx_mem = members.reduce((acc, p) => acc + p.x, 0) / members.length;
+    const cy_mem = members.reduce((acc, p) => acc + p.y, 0) / members.length;
+    const gi = subgroupGi[si];
+    const gC = groupCenters[gi];
+    const sC = subgroupCenters[si];
+    const dx = sC.x - gC.x, dy = sC.y - gC.y;
+    const dist = Math.hypot(dx, dy);
+    const OUT = 22;  // smaller push since we're already at member centroid
+    const lx = dist > 0.5 ? cx_mem + (dx / dist) * OUT : cx_mem;
+    const ly = dist > 0.5 ? cy_mem + (dy / dist) * OUT : cy_mem;
+    d3.select(subLabelEls.nodes()[si]).attr('x', lx).attr('y', ly);
+  });
+}
+
+// Settle then dampen
+setTimeout(() => sim.alpha(0.3).restart(), 100);
+setTimeout(() => sim.alphaTarget(0), 4000);
+
+// ═══════════════════════════
+//  INTERACTIONS
+// ═══════════════════════════
+let sel = null;
+let activeGroup = null;
+let activeSub = null;
+
+// Hover person → show edges + highlight connected
+nodeEls
+  .on('mouseenter', function(ev, d) {
+    if (sel || activeGroup !== null || activeSub !== null) return;
+    hlPerson(d);
+  })
+  .on('mouseleave', function() {
+    if (!sel && activeGroup === null && activeSub === null) clr();
+  })
+  .on('click', function(ev, d) {
+    ev.stopPropagation();
+    sel = d;
+    activeGroup = null; activeSub = null;
+    clr();
+    hlPerson(d);
+    nodeEls.classed('lit', p => p.idx === d.idx);
+    openPerson(d.idx);
+    focusPerson(d, 850);
+  });
+
+// Group label click/hover
+groupLabelEls
+  .on('mouseenter', function(ev, d) {
+    if (sel || activeGroup !== null || activeSub !== null) return;
+    const gi = +this.dataset.gi;
+    hlGroup(gi);
+  })
+  .on('mouseleave', function() {
+    if (!sel && activeGroup === null && activeSub === null) clr();
+  })
+  .on('click', function(ev) {
+    ev.stopPropagation();
+    const gi = +this.dataset.gi;
+    if (activeGroup === gi) {
+      activeGroup = null; activeSub = null;
+      clr();
+      focusOverview(700);
+    } else {
+      sel = null;
+      activeGroup = gi;
+      activeSub = null;
+      closeRP();
+      clr();
+      hlGroup(gi);
+      focusGroup(gi, 800);
+    }
+  });
+
+// Subgroup label click/hover
+subLabelEls
+  .on('mouseenter', function(ev, d) {
+    if (sel) return;
+    const si = +this.dataset.sgi;
+    hlSub(si);
+  })
+  .on('mouseleave', function() {
+    if (!sel && activeGroup === null && activeSub === null) clr();
+    else if (activeGroup !== null && activeSub === null) hlGroup(activeGroup);
+  })
+  .on('click', function(ev) {
+    ev.stopPropagation();
+    const si = +this.dataset.sgi;
+    if (activeSub === si) {
+      activeSub = null;
+      activeGroup = subgroupGi[si];
+      hlGroup(activeGroup);
+      focusGroup(activeGroup, 700);
+    } else {
+      activeSub = si;
+      activeGroup = subgroupGi[si];
+      closeRP();
+      clr();
+      hlSub(si);
+      focusSub(si, 800);
+    }
+  });
+
+svg.on('click', () => {
+  const wasActive = sel || activeGroup !== null || activeSub !== null;
+  sel = null;
+  activeGroup = null;
+  activeSub = null;
+  closeRP();
+  clr();
+  document.querySelectorAll('.legend-sub-item').forEach(el => el.classList.remove('active'));
+  if (wasActive) focusOverview(700);
+});
+
+function hlPerson(d) {
+  // Find connected people (sharing subgroup)
+  const connected = new Set([d.idx]);
+  edges.forEach(e => {
+    if (e.source.idx === d.idx) connected.add(e.target.idx);
+    if (e.target.idx === d.idx) connected.add(e.source.idx);
+  });
+  
+  nodeEls.classed('dim', p => !connected.has(p.idx))
+         .classed('lit', p => connected.has(p.idx));
+  
+  edgeEls.classed('lit', e => e.source.idx === d.idx || e.target.idx === d.idx)
+         .classed('dim', e => !(e.source.idx === d.idx || e.target.idx === d.idx));
+  
+  // Highlight the groups this person belongs to
+  groupLabelEls.style('opacity', (g, i) => d.gi.includes(i) ? 1 : 0.25);
+  
+  // Show this person's subgroups in muted state (so the user can see which
+  // research areas they span), but NOT lit/orange — that would compete
+  // visually with the person's own name, especially for people with 2–3
+  // subgroups whose labels would otherwise all flare up at once.
+  subLabelEls.each(function(s, i) {
+    const isMember = d.si.includes(i);
+    d3.select(this).classed('show', isMember).classed('lit', false).classed('dim', !isMember);
+  });
+  
+  document.querySelectorAll('.pname').forEach(el => el.classList.toggle('hl', +el.dataset.pi === d.idx));
+}
+
+function hlGroup(gi) {
+  const membersSet = new Set(people.filter(p => p.gi.includes(gi)).map(p => p.idx));
+  const groupSubs = subgroups.map((s, i) => i).filter(i => subgroupGi[i] === gi);
+  
+  nodeEls.classed('dim', p => !membersSet.has(p.idx))
+         .classed('lit', p => membersSet.has(p.idx));
+  
+  // An edge counts as "in this group" if any of its shared themes belongs
+  // to this group. Same-pair edges with cross-group themes still light up
+  // for the relevant group, which is the honest representation.
+  edgeEls.classed('lit', e => e.gis.includes(gi) && membersSet.has(e.source.idx) && membersSet.has(e.target.idx))
+         .classed('dim', e => !e.gis.includes(gi));
+  
+  groupLabelEls.style('opacity', (g, i) => i === gi ? 1 : 0.2);
+  
+  // Show subgroup labels for this group's subgroups, dim others
+  subLabelEls.each(function(s, i) {
+    const inGroup = groupSubs.includes(i);
+    d3.select(this).classed('show', inGroup).classed('lit', false).classed('dim', !inGroup);
+  });
+}
+
+function hlSub(si) {
+  const membersSet = new Set(people.filter(p => p.si.includes(si)).map(p => p.idx));
+  const gi = subgroupGi[si];
+  
+  nodeEls.classed('dim', p => !membersSet.has(p.idx))
+         .classed('lit', p => membersSet.has(p.idx));
+  
+  edgeEls.classed('lit', e => e.sis.includes(si))
+         .classed('dim', e => !e.sis.includes(si));
+  
+  groupLabelEls.style('opacity', (g, i) => i === gi ? 0.5 : 0.15);
+  
+  // When focusing on ONE subgroup, only that one stays visible.
+  // Previously kept same-group siblings at baseline opacity for "context",
+  // but in dense groups (e.g. History with 4 closely-packed subgroups)
+  // that left 4 overlapping labels at ~38% opacity — no clear focus.
+  subLabelEls.each(function(s, i) {
+    const isSelected = i === si;
+    d3.select(this)
+      .classed('show', isSelected)
+      .classed('lit', isSelected)
+      .classed('dim', !isSelected);
+  });
+}
+
+function clr() {
+  nodeEls.classed('dim', false).classed('lit', false);
+  edgeEls.classed('lit', false).classed('dim', false).classed('hidden', false);
+  groupLabelEls.style('opacity', 1);
+  subLabelEls.classed('show', false).classed('lit', false).classed('dim', false);
+  document.querySelectorAll('.pname').forEach(el => el.classList.remove('hl'));
+}
+
+// ═══════════════════════════
+//  PROFILE PANEL
+// ═══════════════════════════
+const rp = document.getElementById('rp'), rpB = document.getElementById('rpB');
+document.getElementById('rpX').onclick = () => { closeRP(); clr(); sel = null; focusOverview(700); };
+function closeRP() { rp.classList.remove('open'); }
+
+function openPerson(pi) {
+  const p = people[pi];
+  const groupNames = p.gi.map(i => groups[i].n);
+  const subNames = p.si.map(i => subgroups[i].name);
+  const color = GCOLORS[p.primaryGi];
+  
+  rpB.innerHTML = `
+    <div style="margin-bottom:12px">
+      ${p.img ? `<img src="${p.img}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" style="width:72px;height:72px;border-radius:50%;object-fit:cover;object-position:center 15%;display:block">` : ''}
+      <div class="av" style="background:${color};display:${p.img?'none':'flex'}">${p.ini}</div>
+    </div>
+    <h2>${p.n}</h2>
+    <div class="rpos">${p.p}</div>
+    <span class="rbdg">${p.s||'Faculty'}</span>
+    ${groupNames.length?`<div class="rsec">Research Themes</div><div>${groupNames.map(g=>`<span class="rtag ac">${g}</span>`).join('')}</div>`:''}
+    ${subNames.length?`<div class="rsec">Expertise</div><div>${subNames.map(s=>`<span class="rtag">${s}</span>`).join('')}</div>`:''}
+    ${p.d?`<div class="rsec">About</div><div class="rdesc">${p.d}</div>`:''}
+    ${p.u?`<a class="rlink" href="${p.u}" target="_blank">View NUS Profile →</a>`:''}
+  `;
+  rp.classList.add('open');
+  document.querySelectorAll('.pname').forEach(el => el.classList.toggle('hl', +el.dataset.pi === pi));
+}
+
+// ═══════════════════════════
+//  LEGEND — hierarchical (Research Themes > Subgroups)
+// ═══════════════════════════
+const legendBody = document.getElementById('legendBody');
+groups.forEach((g, gi) => {
+  const grpWrap = document.createElement('div');
+  grpWrap.className = 'legend-group';
+
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.innerHTML = `<span class="ld" style="background:${GCOLORS[gi]}"></span><span>${g.n}</span><span class="ar">▸</span>`;
+
+  const subsEl = document.createElement('div');
+  subsEl.className = 'legend-subs';
+
+  // Group click: toggle open + zoom + highlight
+  item.onmouseenter = () => { if (!sel && activeGroup === null && activeSub === null) hlGroup(gi); };
+  item.onmouseleave = () => { if (!sel && activeGroup === null && activeSub === null) clr(); };
+  item.onclick = (ev) => {
+    ev.stopPropagation();
+    item.classList.toggle('open');
+    if (activeGroup === gi && activeSub === null) {
+      activeGroup = null; activeSub = null; clr(); focusOverview(700);
+    } else {
+      sel = null; activeGroup = gi; activeSub = null;
+      closeRP(); clr(); hlGroup(gi); focusGroup(gi, 800);
+    }
+  };
+  grpWrap.appendChild(item);
+
+  // Subgroups nested inside
+  const groupSubs = subgroups.map((s, sgi) => ({...s, sgi})).filter(s => subgroupGi[s.sgi] === gi);
+  groupSubs.forEach(s => {
+    const sItem = document.createElement('div');
+    sItem.className = 'legend-sub-item';
+    sItem.dataset.sgi = s.sgi;
+    sItem.textContent = s.name;
+    sItem.onmouseenter = () => { if (!sel && activeSub === null) hlSub(s.sgi); };
+    sItem.onmouseleave = () => { if (!sel && activeSub === null) {
+      if (activeGroup !== null) hlGroup(activeGroup); else clr();
+    } };
+    sItem.onclick = (ev) => {
+      ev.stopPropagation();
+      document.querySelectorAll('.legend-sub-item').forEach(el => el.classList.remove('active'));
+      if (activeSub === s.sgi) {
+        activeSub = null; activeGroup = gi; clr(); hlGroup(gi); focusGroup(gi, 700);
+      } else {
+        sItem.classList.add('active');
+        sel = null; activeSub = s.sgi; activeGroup = gi;
+        closeRP(); clr(); hlSub(s.sgi); focusSub(s.sgi, 800);
+      }
+    };
+    subsEl.appendChild(sItem);
+  });
+  grpWrap.appendChild(subsEl);
+  legendBody.appendChild(grpWrap);
+});
+
+// ═══════════════════════════
+//  SIDEBAR
+// ═══════════════════════════
+const sB = document.getElementById('sB');
+
+groups.forEach((g, gi) => {
+  const grpEl = document.createElement('div');
+  grpEl.className = 'grp';
+  
+  const hd = document.createElement('div');
+  hd.className = 'grp-hd';
+  hd.innerHTML = `
+    <span class="gname">${g.n}</span>
+    <span class="gcnt">${g.c}</span>
+    <span class="ar">▸</span>
+  `;
+  hd.onclick = (e) => {
+    e.stopPropagation();
+    hd.classList.toggle('open');
+    if (activeGroup === gi && activeSub === null) {
+      activeGroup = null; clr(); focusOverview(700);
+    }
+    else { sel = null; activeGroup = gi; activeSub = null; closeRP(); clr(); hlGroup(gi); focusGroup(gi, 800); }
+  };
+  grpEl.appendChild(hd);
+  
+  const subsEl = document.createElement('div');
+  subsEl.className = 'subs';
+  
+  const groupSubs = subgroups.map((s, sgi) => ({...s, sgi})).filter(s => subgroupGi[s.sgi] === gi);
+  
+  groupSubs.forEach(s => {
+    const subEl = document.createElement('div');
+    subEl.className = 'sub-item';
+    subEl.dataset.sgi = s.sgi;
+    subEl.innerHTML = `<span>${s.name}</span><span class="scnt">${s.count}</span>`;
+    
+    subEl.onclick = (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.sub-item').forEach(el => el.classList.remove('active'));
+      if (activeSub === s.sgi) {
+        activeSub = null;
+        clr();
+        focusOverview(700);
+      } else {
+        subEl.classList.add('active');
+        activeSub = s.sgi;
+        activeGroup = subgroupGi[s.sgi];
+        sel = null;
+        closeRP();
+        clr();
+        hlSub(s.sgi);
+        focusSub(s.sgi, 800);
+      }
+    };
+    subsEl.appendChild(subEl);
+    
+    const peopleList = document.createElement('div');
+    peopleList.className = 'people-list';
+    const subPeople = people.map((p, pi) => ({p, pi})).filter(x => x.p.si.includes(s.sgi));
+    subPeople.sort((a, b) => a.p.n.localeCompare(b.p.n)).forEach(({p, pi}) => {
+      const nm = document.createElement('span');
+      nm.className = 'pname';
+      nm.dataset.pi = pi;
+      nm.textContent = p.n.replace(/\s*\(.*?\)/g, '');
+      nm.onclick = (e) => {
+        e.stopPropagation();
+        sel = p;
+        activeGroup = null; activeSub = null;
+        clr();
+        hlPerson(p);
+        nodeEls.classed('lit', q => q.idx === pi);
+        openPerson(pi);
+        focusPerson(p, 850);
+      };
+      peopleList.appendChild(nm);
+    });
+    subsEl.appendChild(peopleList);
+  });
+  
+  grpEl.appendChild(subsEl);
+  sB.appendChild(grpEl);
+});
+
+// ═══════════════════════════
+//  SEARCH
+// ═══════════════════════════
+document.getElementById('src').addEventListener('input', function() {
+  const q = this.value.trim().toLowerCase();
+  if (!q) {
+    document.querySelectorAll('.pname').forEach(el => el.style.display = '');
+    document.querySelectorAll('.sub-item').forEach(el => el.style.display = '');
+    document.querySelectorAll('.grp').forEach(el => el.style.display = '');
+    clr();
+    return;
+  }
+  
+  const matched = new Set();
+  people.forEach(p => {
+    if (p.n.toLowerCase().includes(q) ||
+        p.p.toLowerCase().includes(q) ||
+        p.e.some(e => e.toLowerCase().includes(q))) matched.add(p.idx);
+  });
+  
+  // Filter sidebar
+  document.querySelectorAll('.pname').forEach(el => {
+    el.style.display = matched.has(+el.dataset.pi) ? '' : 'none';
+  });
+  document.querySelectorAll('.grp').forEach(grpEl => {
+    const hasMatch = grpEl.querySelector('.pname:not([style*="display: none"])');
+    grpEl.style.display = hasMatch ? '' : 'none';
+    if (hasMatch) {
+      grpEl.querySelector('.grp-hd').classList.add('open');
+      grpEl.querySelectorAll('.sub-item').forEach(subEl => {
+        const peopleList = subEl.nextElementSibling;
+        const hasMatchInSub = peopleList && peopleList.querySelector('.pname:not([style*="display: none"])');
+        subEl.style.display = hasMatchInSub ? '' : 'none';
+        if (hasMatchInSub) subEl.classList.add('active');
+      });
+    }
+  });
+  
+  // Highlight in graph
+  nodeEls.classed('dim', p => !matched.has(p.idx)).classed('lit', p => matched.has(p.idx));
+  edgeEls.classed('dim', true).classed('lit', false);
+});
+
+// Pre-tick the simulation synchronously so node positions settle before
+// we compute the initial overview bbox. Without this, focusOverview(0)
+// runs against seed positions, the bbox is wrong, and the layout looks
+// biased upward on first load.
+for (let i = 0; i < 280; i++) sim.tick();
+sim.stop();  // positions are stable; no need to keep the async loop going
+
+// Apply the slightly zoomed-out overview as the initial view (instant, no
+// animation). This ensures all content is comfortably visible on page load,
+// not pressed against the canvas edges.
+focusOverview(0);
+</script>
+</body>
+</html>
